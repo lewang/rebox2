@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.1
-;; Last-Updated: Fri Jan 28 13:43:53 2011 (+0800)
+;; Last-Updated: Fri Jan 28 17:46:02 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 132
+;;     Update #: 135
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/rebox2.el
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -163,7 +163,9 @@
 (require 'newcomment)
 
 (eval-when-compile
-  (require 'filladapt nil t))
+  (require 'filladapt nil t)
+  (require 'cl)
+  )
 
 (defvar rebox-default-style 15
   "*Preferred style for box comments.  The buffer's
@@ -321,7 +323,11 @@ You don't need to enable the minor mode to use rebox2
   (defvar previous-margin)
   (defvar previous-ee)
   (defvar previous-nw)
-  (defvar unindent-count))
+  (defvar unindent-count)
+  (defvar orig-m)
+  (defvar orig-col)
+  (defvar max-n)
+)
 
 (put 'rebox-error
      'error-conditions
@@ -1063,22 +1069,23 @@ returns t for refil nil for not.
         (orig-col (current-column))
         previous-style)
     (condition-case err
-        (save-restriction
-          (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+        (progn
           (when (use-region-p)
             (signal 'rebox-error "region used"))
-          (setq previous-style (rebox-guess-style))
-          (if (eq previous-style 111)
-              (signal 'rebox-error "style is 111")
-            (goto-char orig-m)
-            (rebox-engine :style previous-style
-                          :marked-point orig-m
-                          :quiet t
-                          :refill nil
-                          :move-point nil
-                          :previous-style previous-style
-                          :insp-func
-                          insp-func)))
+          (save-restriction
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (setq previous-style (rebox-guess-style))
+            (if (eq previous-style 111)
+                (signal 'rebox-error "style is 111")
+              (goto-char orig-m)
+              (rebox-engine :style previous-style
+                            :marked-point orig-m
+                            :quiet t
+                            :refill nil
+                            :move-point nil
+                            :previous-style previous-style
+                            :insp-func
+                            insp-func))))
       ('rebox-error
        (goto-char orig-m)
        (call-interactively orig-func))
@@ -1940,7 +1947,7 @@ box STYLE."
     (if refill
         (let (;;;; whatever adaptive filling should take care of this
               (fill-prefix (if (or adaptive-fill-mode
-                                   (and (boundp filladapt-mode)
+                                   (and (featurep 'filladapt)
                                         filladapt-mode))
                                nil
                            (make-string margin ? )))
