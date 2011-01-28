@@ -1499,7 +1499,15 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
     (when (eolp)
       (set-marker-insertion-type marked-point t))
 
-    (untabify (point-min) (point-max))
+    ;; untabify, but preserve position of marked-point
+    (let ((marked-col (progn
+                        (goto-char marked-point)
+                        (current-column))))
+      (untabify (point-min) (point-max))
+      (goto-char marked-point)
+      (unless (= (current-column) marked-col)
+        (move-to-column marked-col)
+        (set-marker marked-point (point))))
 
     (catch 'rebox-engine-done
       ;; inspect the box
@@ -1557,14 +1565,19 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
         (rebox-build refill previous-margin style marked-point move-point)))
 
     ;; Retabify to the left only (adapted from tabify.el).
-    (when indent-tabs-mode
-      (goto-char (point-min))
-      (while (re-search-forward "^[ \t][ \t]+" nil t)
-        (let ((column (current-column)))
-          (delete-region (match-beginning 0) (point))
-          (indent-to column))))
-
-    (goto-char marked-point)
+    (if indent-tabs-mode
+        (let ((marked-col (progn
+                            (goto-char marked-point)
+                            (current-column))))
+          (goto-char (point-min))
+          (while (re-search-forward "^[ \t][ \t]+" nil t)
+            (let ((column (current-column)))
+              (delete-region (match-beginning 0) (point))
+              (indent-to column)))
+          (goto-char marked-point)
+          (move-to-column marked-col t)
+          (set-marker marked-point (point)))
+      (goto-char marked-point))
 
     ;; Remove all intermediate boundaries from the undo list.
     (unless (eq buffer-undo-list undo-list)
