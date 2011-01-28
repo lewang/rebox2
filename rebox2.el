@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.1
-;; Last-Updated: Fri Jan 28 12:55:04 2011 (+0800)
+;; Last-Updated: Fri Jan 28 13:43:53 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 129
+;;     Update #: 132
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/rebox2.el
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -380,8 +380,11 @@ You don't need to enable the minor mode to use rebox2
         "? box123456 ?"
         "?????????????")
 
-    (20 125
+    (20 124
         "??box123456")
+
+    (21 125
+        "?? box123456")
 
     (22 225
         "?? box123456 ??"
@@ -401,8 +404,11 @@ You don't need to enable the minor mode to use rebox2
         "?? box123456 ??"
         "???????????????")
 
-    (30 135
+    (30 134
         "???box123456")
+
+    (31 135
+        "??? box123456")
 
     (32 235
         "??? box123456 ???"
@@ -422,8 +428,11 @@ You don't need to enable the minor mode to use rebox2
         "??? box123456 ???"
         "?????????????????")
 
-    (40 145
+    (40 144
         "????box123456")
+
+    (41 145
+        "???? box123456")
 
     (42 245
         "???? box123456 ????"
@@ -443,11 +452,17 @@ You don't need to enable the minor mode to use rebox2
         "???? box123456 ????"
         "???????????????????")
 
-    (50 155
+    (50 154
         "?????box123456")
 
-    (60 165
+    (51 155
+        "????? box123456")
+
+    (60 164
         "??????box123456")
+
+    (61 165
+        "?????? box123456")
 
     ;;,----
     ;;| boxquote style for comments
@@ -524,10 +539,16 @@ You don't need to enable the minor mode to use rebox2
          "\\===========/")
 
     ;; boxquote style
+
     (126 125
          ",----"
          "| box123456"
          "`----")
+
+    (127 126
+         ",----------"
+         "| box123456"
+         "`----------")
 
     (141 143
          "| box123456 ")
@@ -645,7 +666,6 @@ You don't need to enable the minor mode to use rebox2
          "/*************/"
          "/* box123456 */"
          "/*************/")
-
 
     ))
 
