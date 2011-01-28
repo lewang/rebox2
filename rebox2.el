@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.1
-;; Last-Updated: Fri Jan 28 17:46:02 2011 (+0800)
+;; Last-Updated: Sat Jan 29 00:25:37 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 135
+;;     Update #: 139
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/rebox2.el
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1135,6 +1135,36 @@ with argument N, move n columns."
                                (throw 'rebox-engine-done t))
                              'backward-delete-char-untabify))
 
+(defun rebox-ensure-region-whole-lines (r-beg r-end)
+  "Ensure region covered by r-beg and r-end are whole lines.
+
+R-BEG and R-END are markers.  We assume R-BEG < R-END.
+
+Returns t when changes were made to the markers."
+  (let (col
+        changes-made)
+    (goto-char r-beg)
+    (unless (bolp)
+      (setq changes-made t)
+      (setq col (current-column))
+      (beginning-of-line 1)
+      (unless (prog2
+                  (skip-chars-forward " \t")
+                  (>= (current-column) col))
+        (goto-char r-beg)
+        (newline)
+        (indent-to col))
+      (setq r-beg (point-at-bol)))
+    (goto-char r-end)
+    (unless (bolp)
+      (setq changes-made t)
+      (if (and (looking-at-p "[ \t]*$")
+               (not (eobp)))
+          (set-marker r-end (point-at-bol 2))
+        (newline 1)
+        (set-marker r-end (point))))
+    changes-made))
+
 ;;;###autoload
 (defun* rebox-region (r-beg r-end &key style (refill t) previous-style (quiet nil))
   "Rebox the region.
@@ -1156,24 +1186,13 @@ starts and ends on a newline.
   (let ((r-end (progn
                  (goto-char r-end)
                  (point-marker)))
-        col)
-    (goto-char r-beg)
-    (unless (bolp)
-      (setq col (current-column))
-      (beginning-of-line 1)
-      (unless (prog2
-                  (skip-chars-forward " \t")
-                  (>= (current-column) col))
-        (goto-char r-beg)
-        (newline)
-        (indent-to col))
-      (setq r-beg (point-at-bol)))
-    (goto-char r-end)
-    (unless (bolp)
-      (if (and (looking-at-p "[ \t]*$")
-               (not (eobp)))
-          (set-marker r-end (point-at-bol 2))
-        (insert-before-markers "\n")))
+        (r-beg (progn
+                 (goto-char r-beg)
+                 (point-marker))))
+    ;; we can't possible recognize any style when region was improperly
+    ;; selected.
+    (when (rebox-ensure-region-whole-lines r-beg r-end)
+        (setq previous-style 111))
     (save-restriction
       (narrow-to-region r-beg r-end)
       (rebox-engine :style style
@@ -1243,12 +1262,14 @@ This function processes prefix arg the same way as`rebox-comment' with the
       (condition-case err
           (if (use-region-p)
               (let (deactivate-mark)
-                (if (and (save-excursion
-                           (goto-char (region-beginning))
-                           (eq (point) (point-at-bol)))
-                         (save-excursion
-                           (goto-char (region-end))
-                           (eq (point) (point-at-bol))))
+                (if (and (prog2
+                             (goto-char (region-beginning))
+                             (eq (point) (point-at-bol))
+                           (goto-char orig-m))
+                         (prog2
+                             (goto-char (region-end))
+                             (eq (point) (point-at-bol))
+                           (goto-char orig-m)))
                     (progn
                       (setq temp-mark (set-marker (make-marker) (mark)))
                       (set-marker-insertion-type (if (< temp-mark orig-m)
@@ -1278,11 +1299,23 @@ This function processes prefix arg the same way as`rebox-comment' with the
                                         :quiet t)))
                       (set-mark temp-mark))
                   (if (memq last-command '(rebox-dwim-fill))
-                      (progn
-                        (message "Refilling boxing style: %s" style)
-                        (rebox-region (region-beginning) (region-end)
-                                      :style style
-                                      :refill t))
+                      (let ((r-beg (prog2
+                                     (goto-char (region-beginning))
+                                     (point-marker)
+                                     (goto-char orig-m)))
+                            (r-end (prog2
+                                       (goto-char (region-end))
+                                       (point-marker)
+                                     (goto-char orig-m))))
+                        (rebox-ensure-region-whole-lines r-beg r-end)
+                        (if (< (point) (mark))
+                            (progn
+                              (set-mark r-end)
+                              (goto-char r-beg))
+                          (set-mark r-beg)
+                          (goto-char r-end))
+                        (rebox-dwim-fill arg)
+                        (set-marker orig-m (point)))
                     (message "Refilling region")
                     (fill-region (region-beginning) (region-end)))))
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
