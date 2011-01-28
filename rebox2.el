@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.1
-;; Last-Updated: Sat Jan 29 00:25:37 2011 (+0800)
+;; Last-Updated: Sat Jan 29 02:45:02 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 139
+;;     Update #: 152
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/rebox2.el
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -23,15 +23,25 @@
 ;;
 ;;; Commentary:
 
-                             ;;;;;;;;;;;;;;;;;;;;
-                             ;; Hi, I'm a box. ;;
-                             ;;;;;;;;;;;;;;;;;;;;
+                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                     ;; Hi, I'm a box. My style is 525 ;;
+                     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Installation:
 ;;
 ;; 1. Add rebox2.el to a directory in your load-path.
 ;;
-;; 2.
+;; 2. Add to your .emacs.el:
+;;
+;;     (require 'rebox2)
+;;
+;; 3. Default boxing styles should work for most programming modes, however,
+;;    you may want to set the style you prefer for each major-mode by using
+;;    the mode's hook:
+;;
+;;     (add-hook 'emacs-lisp-mode-hook (lambda()
+;;                                (setq rebox-default-style 525)))
+;;
 ;;
 
 ;;; Ideas removed from François Pinard's original version
@@ -290,6 +300,7 @@ You don't need to enable the minor mode to use rebox2
             ([(meta w)] . rebox-kill-ring-save)
             ([(control y)] . rebox-yank)
             ([(meta y)] . rebox-yank-pop)
+            ([(meta c)] . rebox-center)
             (" " . rebox-space)
             ([(backspace)] . rebox-backspace)
 
@@ -912,6 +923,7 @@ returns t for refil nil for not.
                             :marked-point orig-m
                             :quiet t
                             :refill nil
+                            :move-point nil
                             :previous-style previous-style
                             :insp-func
                             (lambda ()
@@ -958,6 +970,7 @@ returns t for refil nil for not.
               (rebox-engine :style previous-style
                             :quiet t
                             :refill nil
+                            :move-point nil
                             :previous-style previous-style
                             :insp-func
                             (lambda ()
@@ -1019,7 +1032,8 @@ returns t for refil nil for not.
                           mod-func)))
       ('rebox-error
        (goto-char orig-m)
-       (call-interactively orig-func))
+       (and orig-func
+            (call-interactively orig-func)))
       ('error
        (signal (car err) (cdr err))))))
 
@@ -1044,7 +1058,7 @@ returns t for refil nil for not.
   (interactive "P*")
   (rebox-kill-yank-wrapper (lambda ()
                              (goto-char orig-m)
-                             (call-interactively rebox-yank-function)
+                             (call-interactively 'yank)
                              (set-marker orig-m (point)))
                            rebox-yank-function))
 
@@ -1052,7 +1066,7 @@ returns t for refil nil for not.
   (interactive "P*")
   (rebox-kill-yank-wrapper (lambda ()
                              (goto-char orig-m)
-                             (call-interactively rebox-yank-pop-function)
+                             (call-interactively 'yank-pop)
                              (set-marker orig-m (point)))
                            rebox-yank-pop-function))
 
@@ -1088,9 +1102,28 @@ returns t for refil nil for not.
                             insp-func))))
       ('rebox-error
        (goto-char orig-m)
-       (call-interactively orig-func))
+       (and orig-func
+            (call-interactively orig-func)))
       ('error
        (signal (car err) (cdr err))))))
+
+(defun rebox-center ()
+  "If point is in the left border of a box, center the box,
+else call the default binding of M-c.
+
+with argument N, move n columns."
+  (interactive "*")
+  (let ((orig-func (cdr (assq 'meta-c-func rebox-save-env-alist))))
+    (rebox-left-border-wrapper (lambda ()
+                                 (if (< (current-column) unindent-count)
+                                     (center-region (point-min) (point-max))
+                                   (when orig-func
+                                     (call-interactively orig-func)
+                                     (set-marker orig-m (point))))
+                                 (throw 'rebox-engine-done t))
+                               orig-func
+                               )))
+
 
 (defun rebox-space (n)
   "If point is in the left border of a box, move box to the right,
@@ -1120,20 +1153,22 @@ else call `backward-delete-char-untabify'.
 
 with argument N, move n columns."
   (interactive "*p")
-  (rebox-left-border-wrapper (lambda ()
-                               (if (< orig-col unindent-count)
-                                   (delete-rectangle (point-min)
-                                                     (progn (goto-char (point-max))
-                                                            (beginning-of-line 0)
-                                                            (setq max-n (min orig-col previous-margin))
-                                                            (if (< n max-n)
-                                                                (move-to-column n)
-                                                              (move-to-column max-n))
-                                                            (point)))
-                                 (goto-char orig-m)
-                                 (call-interactively 'backward-delete-char-untabify))
-                               (throw 'rebox-engine-done t))
-                             'backward-delete-char-untabify))
+  (if (use-region-p)
+      (call-interactively 'rebox-kill-line)
+    (rebox-left-border-wrapper (lambda ()
+                                 (if (< orig-col unindent-count)
+                                     (delete-rectangle (point-min)
+                                                       (progn (goto-char (point-max))
+                                                              (beginning-of-line 0)
+                                                              (setq max-n (min orig-col previous-margin))
+                                                              (if (< n max-n)
+                                                                  (move-to-column n)
+                                                                (move-to-column max-n))
+                                                              (point)))
+                                   (goto-char orig-m)
+                                   (call-interactively 'backward-delete-char-untabify))
+                                 (throw 'rebox-engine-done t))
+                               'backward-delete-char-untabify)))
 
 (defun rebox-ensure-region-whole-lines (r-beg r-end)
   "Ensure region covered by r-beg and r-end are whole lines.
@@ -1152,7 +1187,7 @@ Returns t when changes were made to the markers."
                   (skip-chars-forward " \t")
                   (>= (current-column) col))
         (goto-char r-beg)
-        (newline)
+        (insert "\n")
         (indent-to col))
       (setq r-beg (point-at-bol)))
     (goto-char r-end)
@@ -1161,7 +1196,7 @@ Returns t when changes were made to the markers."
       (if (and (looking-at-p "[ \t]*$")
                (not (eobp)))
           (set-marker r-end (point-at-bol 2))
-        (newline 1)
+        (insert "\n")
         (set-marker r-end (point))))
     changes-made))
 
@@ -1443,18 +1478,24 @@ and indent.
                                   ;;-lw- just always goto beginning of line?
                                   (when arg
                                     (goto-char orig-m)
-                                    (beginning-of-line)
-                                    (setq text-beg-col
-                                          (if (looking-at-p "^[ \t]* $")
-                                              (progn
-                                                (goto-char orig-m)
-                                                (+ unindent-count (current-column)))
-                                            (skip-chars-forward " \t")
-                                            (+ unindent-count (current-column))))
+                                    (if (looking-at-p "[ \t]*$")
+                                        ;; creating blank line
+                                        (progn
+                                          (beginning-of-line)
+                                          (setq text-beg-col
+                                                (if (looking-at-p "[ \t]*$")
+                                                    (progn
+                                                      (goto-char orig-m)
+                                                      (+ previous-margin
+                                                         (length ww)
+                                                         (current-column)))
+                                                  (skip-chars-forward " \t")
+                                                  (+ previous-margin
+                                                     (length ww)
+                                                     (current-column)))))
+                                      (setq text-beg-col (+ previous-margin (length ww))))
                                     (goto-char orig-m)
-                                    (newline arg)
-
-                                    )))
+                                    (newline arg))))
                   (goto-char orig-m)
                   (move-to-column text-beg-col t))
               (goto-char orig-m)
@@ -1500,6 +1541,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (style (or style previous-style))
          (style-data (or (cdr (assq style rebox-style-data))
                          (signal 'rebox-error (cons style "style is unknown"))))
+         (ww (aref style-data 9))
          (unindent-count (+ previous-margin (length previous-ww)))
          ;; (marked-col-within-box (progn
          ;;                          (goto-char marked-point)
@@ -1526,12 +1568,6 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
     (when (not (< (point) (point-max)))
       (signal 'rebox-error "Cannot box region consisting of only spaces."))
 
-    ;; if we don't set the insertion type, and it gets pulled to the beginning
-    ;; of line, it will get stuck there.
-    (goto-char marked-point)
-    (when (eolp)
-      (set-marker-insertion-type marked-point t))
-
     ;; untabify, but preserve position of marked-point
     (let ((marked-col (progn
                         (goto-char marked-point)
@@ -1548,6 +1584,12 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
         (if (functionp insp-func)
             (funcall insp-func)
           (error "%s is not a function" insp-func)))
+
+      ;; if we don't set the insertion type, and it gets pulled to the beginning
+      ;; of line, it will get stuck there.
+      (goto-char marked-point)
+      (when (eolp)
+        (set-marker-insertion-type marked-point t))
 
       ;; Remove all previous comment marks.
       (unless (eq previous-style 111)
@@ -1608,8 +1650,9 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
               (delete-region (match-beginning 0) (point))
               (indent-to column)))
           (goto-char marked-point)
-          (move-to-column marked-col t)
-          (set-marker marked-point (point)))
+          (unless (= (current-column) marked-col)
+            (move-to-column marked-col)
+            (set-marker marked-point (point))))
       (goto-char marked-point))
 
     ;; Remove all intermediate boundaries from the undo list.
@@ -1660,8 +1703,9 @@ directions, then narrow the buffer around it."
               (setq comment-e (point-at-bol))
               (when (and (eq (point) (point-max)) ; hit eob
                          (not (eq (point) (point-at-bol)))) ; eob is *not* newline
-                ;; we need to end on a blank line for rebox to work properly
-                (newline)
+                ;; we need to end on a blank line for rebox to work properly,
+                ;; we don't call `newline' to avoid refilling.
+                (insert "\n")
                 (setq comment-e (point))
                 (throw 'roo nil))))))
     (goto-char orig-p)
@@ -1680,7 +1724,7 @@ directions, then narrow the buffer around it."
                             (goto-char orig-p))
                         ;; we need a blank line at the end of the narrow
                         (goto-char (point-max))
-                        (newline)
+                        (insert "\n")
                         (point))))
     (if (or (not comment-b)
             (not comment-e)
@@ -2162,7 +2206,8 @@ count trailing spaces or t to always count.
   "load some settings"
   (mapc (lambda (var)
           (push (cons var (symbol-value var)) rebox-save-env-alist))
-        rebox-save-env-vars))
+        rebox-save-env-vars)
+  (push (cons 'meta-c-func (lookup-key global-map [(meta c)])) rebox-save-env-alist))
 
 (defun rebox-restore-env ()
   "load some settings"
