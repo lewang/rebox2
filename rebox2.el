@@ -2,19 +2,19 @@
 
 ;; Filename: rebox2.el
 ;; Description:
-;; Author: François Pinard
+;; Author: FranÃ§ois Pinard
 ;;         Le Wang
 ;; Maintainer: Le Wang
 
-;; Copyright © 2011 Le Wang
-;; Copyright © 1991,92,93,94,95,96,97,98,00 Progiciels Bourbeau-Pinard inc.
-;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
+;; Copyright Â© 2011 Le Wang
+;; Copyright Â© 1991,92,93,94,95,96,97,98,00 Progiciels Bourbeau-Pinard inc.
+;; FranÃ§ois Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.1
-;; Last-Updated: Fri Jan 28 11:46:16 2011 (+0800)
+;; Last-Updated: Fri Jan 28 12:55:04 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 128
+;;     Update #: 129
 ;; URL: http://www.emacswiki.org/cgi-bin/wiki/rebox2.el
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -34,7 +34,7 @@
 ;; 2.
 ;;
 
-;;; Ideas removed from François Pinard's original version
+;;; Ideas removed from FranÃ§ois Pinard's original version
 ;;
 ;; * Building styles on top of each other.
 ;;
@@ -90,7 +90,7 @@
 ;;; Code:
 
 ;;,----
-;;| François Pinard's original commentary (with non-relevant stuff removed)
+;;| FranÃ§ois Pinard's original commentary (with non-relevant stuff removed)
 ;;`----
 
 
