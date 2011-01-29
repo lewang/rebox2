@@ -2066,7 +2066,7 @@ box STYLE."
                 (do-auto-fill))
             (setq count-trailing-spaces nil)
             (fill-region (point-min) limit-m)))
-      (setq count-trailing-spaces t))
+      (setq count-trailing-spaces marked-point))
     (setq right-margin (max (+ (rebox-right-margin :count-trailing-spaces count-trailing-spaces)
                                (length ww)
                                margin)
