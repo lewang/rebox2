@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sat Jan 29 14:07:46 2011 (+0800)
+;; Last-Updated: Sat Jan 29 15:32:54 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 155
+;;     Update #: 156
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1331,7 +1331,9 @@ This function processes prefix arg the same way as`rebox-comment' with the
                                           :quiet t))
                         (message "Refilling style: %s" previous-style)
                         (if (eq previous-style 111)
-                            (call-interactively 'fill-region)
+                            (progn
+                              (goto-char orig-m)
+                              (call-interactively 'fill-region))
                           (rebox-engine :style previous-style
                                         :refill t
                                         :previous-style previous-style
