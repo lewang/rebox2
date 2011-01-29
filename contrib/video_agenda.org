@@ -1,0 +1,35 @@
+
+                            .--------------------.
+                            | Rebox Video Agenda |
+                            `--------------------'
+
+
+* Basic setup, minimal installation:
+
+    (require 'rebox2)
+    (global-set-key [(meta q)] 'rebox-dwim-fill)
+    (global-set-key [(shift meta q)] 'rebox-dwim-no-fill)
+
+* Demonstrate functionality - box, fill vs no-fill
+
+   - using different styles
+     - cycling through "rebox-default-style" and "rebox-no-box-comment-style"
+       with rebox-dwim*
+     - unboxing comments with '-' prefix
+     - unboxing completely with "111" style.
+     - boxing with specific style with "nnn" prefix
+
+   - all comments are boxes
+
+* Alternatively, you can activate the rebox minor-mode when you need it:
+
+    M-x rebox-mode
+
+* Minor-mode features:
+
+   - auto-fill boxes
+   - hype filladapt
+   - motion (beginning-of-line, end-of-line) within box
+   - S-return rebox-newline
+   - kill/yank within box
+   - move box by using space, backspace / center with M-c

@@ -11,11 +11,11 @@
 ;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
-;; Version: 0.1
-;; Last-Updated: Sat Jan 29 02:45:02 2011 (+0800)
+;; Version: 0.2
+;; Last-Updated: Sat Jan 29 14:07:46 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 152
-;; URL: http://www.emacswiki.org/cgi-bin/wiki/rebox2.el
+;;     Update #: 155
+;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
 
@@ -31,16 +31,20 @@
 ;;
 ;; 1. Add rebox2.el to a directory in your load-path.
 ;;
-;; 2. Add to your .emacs.el:
+;; 2. Basic install - add to your ".emacs":
 ;;
 ;;     (require 'rebox2)
+;;     (global-set-key [(meta q)] 'rebox-dwim-fill)
+;;     (global-set-key [(shift meta q)] 'rebox-dwim-no-fill)
 ;;
-;; 3. Default boxing styles should work for most programming modes, however,
-;;    you may want to set the style you prefer for each major-mode by using
-;;    the mode's hook:
+;; 3. Full install - use `rebox-mode' by in major-mode hooks:
 ;;
-;;     (add-hook 'emacs-lisp-mode-hook (lambda()
-;;                                (setq rebox-default-style 525)))
+;;     (add-hook emacs-lisp-mode-hook (lambda ()
+;;                                     (setq rebox-default-style 525)
+;;                                     (rebox-mode 1)))
+;;
+;;    Default boxing styles should work for most programming modes, however,
+;;    you may want to set the style you prefer for each major-mode like above
 ;;
 ;;
 
@@ -1189,7 +1193,7 @@ Returns t when changes were made to the markers."
         (goto-char r-beg)
         (insert "\n")
         (indent-to col))
-      (setq r-beg (point-at-bol)))
+      (set-marker r-beg (point-at-bol)))
     (goto-char r-end)
     (unless (bolp)
       (setq changes-made t)
@@ -1459,7 +1463,7 @@ and indent.
           (progn
             (setq orig-m (point-marker))
             (set-marker-insertion-type orig-m t)
-            (rebox-find-and-narrow)
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (setq style (rebox-guess-style))
             (if (not (eq style 111)) ; 111 is no-box
                 (progn
@@ -1540,7 +1544,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (previous-se (aref previous-style-data 13))
          (style (or style previous-style))
          (style-data (or (cdr (assq style rebox-style-data))
-                         (signal 'rebox-error (cons style "style is unknown"))))
+                         (signal 'rebox-error (format "style \"%s\"is unknown" style))))
          (ww (aref style-data 9))
          (unindent-count (+ previous-margin (length previous-ww)))
          ;; (marked-col-within-box (progn
