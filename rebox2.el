@@ -1824,54 +1824,35 @@ returns guess as single digit."
       (setq style-data (cdr style-data)))
     best-style))
 
-(defun* rebox-line-has-comment (&key (move-multiline)
+(defun* rebox-line-has-comment (&key (move-multiline t)
                                      (throw-label nil))
-  (let (found
-        (bare-c-end (and comment-end (rebox-rstrip (rebox-lstrip comment-end))))
-        (bare-c-start (and comment-start (rebox-rstrip (rebox-lstrip comment-start))))
+  (let ((bare-comment-end (and comment-end (rebox-rstrip (rebox-lstrip comment-end))))
+        (bare-comment-start (and comment-start (rebox-rstrip (rebox-lstrip comment-start))))
         (starting-bol (point-at-bol))
+        comment-start-pos
         )
     (end-of-line 1)
-    (setq found (or (comment-beginning)
-                    ;; C-style comments, we could be in the white space past comment end
-                    (when (and (stringp comment-end)
-                               (not (equal comment-end "")))
-                      (goto-char (point-at-eol))
-                      (search-backward-regexp (concat (regexp-quote bare-c-end)
-                                                      "[ \t]*$")
-                                              (point-at-bol)
-                                              t)
-                      (comment-beginning))))
+    (setq comment-start-pos (comment-beginning))
+    (unless comment-start-pos
+      ;; C-style comments, we could be in the white space past comment end
+      (when (and (stringp comment-end)
+                 (not (equal comment-end "")))
+        (goto-char (point-at-eol))
+        (search-backward-regexp (concat (regexp-quote bare-comment-end)
+                                        "[ \t]*$")
+                                (point-at-bol)
+                                t)
+        (setq comment-start-pos (comment-beginning))))
     ;; detect mid-line comments
-    (when found
+    (when comment-start-pos
+      (goto-char comment-start-pos)
       (skip-chars-backward " \t")
-      (setq found
-            (if (if (> (length bare-c-start) 1)
-                    (if (and (< (length bare-c-start) (point))
-                               (equal (buffer-substring-no-properties
-                                       (- (point)
-                                          (length bare-c-start))
-                                       (point))
-                                      bare-c-start))
-                        (goto-char (- (point) (length bare-c-start)))
-                      nil)
-                  (skip-chars-backward bare-c-start))
-                (progn
-                  (skip-chars-backward " \t")
-                  (if (= (point) (point-at-bol))
-                      t
-                    (if throw-label
-                        (throw throw-label nil)
-                      (signal 'rebox-mid-line-comment-found nil))))
-              ;; we don't understand these comments where `comment-beginning'
-              ;; found something, but we can't find the `comment-start',
-              ;; e.g. "//" in c
-              t)))
+      (unless (= (point) (point-at-bol))
+        (signal 'rebox-mid-line-comment-found nil)))
     (if (and (< (point) starting-bol)
              (not move-multiline))
         (goto-char starting-bol))
-    found
-    ))
+    comment-start-pos))
 
 
 (defun* rebox-regexp-quote (string &key (rstrip t) (lstrip t) (match-trailing-spaces t))
