@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 02:14:35 2011 (+0800)
+;; Last-Updated: Sun Jan 30 02:51:02 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 160
+;;     Update #: 162
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1064,11 +1064,13 @@ returns t for refil nil for not.
   (rebox-kill-yank-wrapper (lambda ()
                              (goto-char orig-m)
                              (condition-case err
-                                 (save-restriction
-                                   ;; protect the final newline character
-                                   (narrow-to-region (point-min) (1- (point-max)))
+                                 (progn
                                    (if (use-region-p)
-                                       (kill-region (region-beginning) (region-end))
+                                       (progn
+                                         (kill-region (region-beginning) (region-end))
+                                         (goto-char (point-max))
+                                         (unless (bolp)
+                                           (insert "\n")))
                                      (call-interactively rebox-kill-line-function)))
                                ('end-of-buffer
                                 (message "end of box reached, aborting %s." this-command))))
