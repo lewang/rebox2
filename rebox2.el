@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sat Jan 29 16:18:25 2011 (+0800)
+;; Last-Updated: Sat Jan 29 18:36:08 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 157
+;;     Update #: 158
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -941,7 +941,7 @@ returns t for refil nil for not.
                             :previous-style previous-style
                             :insp-func
                             (lambda ()
-                              (goto-char orig-m)
+                              (goto-char marked-point)
                               (if ;; top or bottom border
                                   (or (and (or previous-nw previous-nn previous-ne)
                                            (eq (line-number-at-pos) 1))
@@ -957,7 +957,7 @@ returns t for refil nil for not.
                                           (+ (length (rebox-make-fill-prefix))
                                              unindent-count)))))
                               (throw 'rebox-engine-done t)))
-              (goto-char orig-m)
+	      (goto-char orig-m)
               (if (or (bolp)
                       (> (current-column) boxed-line-start-col))
                   (move-to-column boxed-line-start-col)
@@ -1658,7 +1658,13 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
     ;; Retabify to the left only (adapted from tabify.el).
     (if indent-tabs-mode
         (let ((marked-col (progn
-                            (goto-char marked-point)
+			    ;; Filename: rebox2.el hack to get around emacs
+			    ;; bug, if this format line isn't here and
+			    ;; `indent-tabs-mode' is t,
+			    ;; rebox-beginning-of-line doesn't work as
+			    ;; expected
+			    (format "%s" marked-point)
+			    (goto-char marked-point)
                             (current-column))))
           (goto-char (point-min))
           (while (re-search-forward "^[ \t][ \t]+" nil t)
