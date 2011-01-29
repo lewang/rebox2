@@ -33,3 +33,7 @@
    - S-return rebox-newline
    - kill/yank within box
    - move box by using space, backspace / center with M-c
+* optional filladapt
+
+    (require 'filladapt)
+    (setq-default filladapt-mode t)

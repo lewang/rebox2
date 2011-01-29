@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sat Jan 29 15:32:54 2011 (+0800)
+;; Last-Updated: Sat Jan 29 16:18:25 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 156
+;;     Update #: 157
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -37,7 +37,7 @@
 ;;     (global-set-key [(meta q)] 'rebox-dwim-fill)
 ;;     (global-set-key [(shift meta q)] 'rebox-dwim-no-fill)
 ;;
-;; 3. Full install - use `rebox-mode' by in major-mode hooks:
+;; 3. Full install - use `rebox-mode' in major-mode hooks:
 ;;
 ;;     (add-hook emacs-lisp-mode-hook (lambda ()
 ;;                                     (setq rebox-default-style 525)
@@ -45,6 +45,16 @@
 ;;
 ;;    Default boxing styles should work for most programming modes, however,
 ;;    you may want to set the style you prefer for each major-mode like above
+;;
+;; ** minor-mode features
+;;
+;;   - auto-fill boxes
+;;   - hype filladapt
+;;   - motion (beginning-of-line, end-of-line) within box
+;;   - S-return rebox-newline
+;;   - kill/yank within box only text, not box borders
+;;   - move box by using space, backspace / center with M-c
+;;     - point has to be to the left of the border
 ;;
 ;;
 
