@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sat Jan 29 18:36:08 2011 (+0800)
+;; Last-Updated: Sun Jan 30 02:14:35 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 158
+;;     Update #: 160
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -951,9 +951,13 @@ returns t for refil nil for not.
                                 (save-restriction
                                   (narrow-to-region (+ (point-at-bol) unindent-count)
                                                     (point-at-eol))
+                                  (beginning-of-line 1)
                                   (setq boxed-line-start-col
-                                        (if (looking-at-p "^[ \t]*$")
-                                            0
+                                        (if (looking-at-p (concat "[ \t]*"
+                                                                  (and previous-ee
+                                                                       (regexp-quote previous-ee))
+                                                                  "$"))
+                                            unindent-count
                                           (+ (length (rebox-make-fill-prefix))
                                              unindent-count)))))
                               (throw 'rebox-engine-done t)))
@@ -996,8 +1000,6 @@ returns t for refil nil for not.
                                       (and (or previous-sw previous-ss previous-se)
                                            (eq (line-number-at-pos) (1- (line-number-at-pos (point-max))))))
                                   (setq boxed-line-end-col (point-at-eol))
-                                (narrow-to-region (+ (point-at-bol) unindent-count)
-                                                  (point-at-eol))
                                 (setq boxed-line-end-col
                                       (if previous-ee
                                           (progn
@@ -1010,7 +1012,11 @@ returns t for refil nil for not.
                                         (search-forward-regexp "[ \t]*$"
                                                                (point-at-eol))
                                         (goto-char (match-beginning 0))
-                                        (current-column))))
+                                        (current-column)))
+                                ;; blank line
+                                (when (<= boxed-line-end-col unindent-count)
+                                  (setq boxed-line-end-col (progn (goto-char (point-at-eol))
+                                                                  (current-column)))))
                               (throw 'rebox-engine-done t)))
               (goto-char orig-m)
               (if (or (eolp)
