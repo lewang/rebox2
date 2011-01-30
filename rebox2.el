@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 11:18:26 2011 (+0800)
+;; Last-Updated: Sun Jan 30 11:35:30 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 164
+;;     Update #: 166
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -188,195 +188,7 @@
 
 (eval-when-compile
   (require 'filladapt nil t)
-  (require 'cl)
-  )
-
-(defvar rebox-default-style 15
-  "*Preferred style for box comments.  The buffer's
-`comment-start' is used with this style to arrive at the box
-style.")
-(make-variable-buffer-local 'rebox-default-style)
-
-(defvar rebox-save-env-alist nil
-  "backup value saved for here for mode deactivation")
-(make-variable-buffer-local 'rebox-save-env-alist)
-
-(defvar rebox-save-env-vars
-  '(comment-auto-fill-only-comments
-    auto-fill-function
-    normal-auto-fill-function)
-  "list of variables overwritten by `rebox-mode' to be saved.")
-
-(defvar rebox-default-unbox-style 11
-  "*Preferred style for unboxed comments.")
-(make-variable-buffer-local 'rebox-default-unbox-style)
-
-(defgroup rebox nil
-  "rebox."
-  :group 'convenience)
-
-(defcustom rebox-keep-blank-lines t
-  "Non-nil gives rebox permission to truncate blank lines at
-beginning of box, end, and more than three consecutive blank
-lines in the body of box."
-  :type 'boolean
-  :group 'rebox)
-
-(defcustom rebox-mode-line-string " rebox"
-  ""
-  :type 'string
-  :group 'rebox)
-
-(defcustom rebox-newline-indent-function-default 'comment-indent-new-line
-  "function called by `rebox-indent-new-line' when doesn't see a box."
-  :group 'rebox)
-
-(defvar rebox-newline-indent-function nil
-  "cached function for this buffer.")
-(make-variable-buffer-local 'rebox-newline-indent-function)
-
-(defcustom rebox-kill-line-function 'kill-line
-  "function called by `rebox-kill-line' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-kill-ring-save-function 'kill-ring-save
-  "function called by `rebox-kill-ring-save' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-beginning-of-line-function 'move-beginning-of-line
-  "function called by `rebox-beginning-of-line' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-end-of-line-function 'move-end-of-line
-  "function called by `rebox-end-of-line' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-yank-function 'yank
-  "function called by `rebox-yank' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-yank-pop-function 'yank-pop
-  "function called by `rebox-yank-pop' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-newline-indent-function-alist
-  '((c-mode   . c-indent-new-comment-line)
-    (c++-mode . c-indent-new-comment-line)
-    (org-mode . org-return-indent))
-  "list of (major-mode . function) for making a newline.
-
-The function should make and indent a new comment-line for the
-mode.  `comment-indent-newline' is the default.
-"
-  :type '(alist :key-type 'symbol
-                :value-type 'symbol)
-  :group 'rebox)
-
-(defcustom rebox-hybrid-major-modes
-  '(org-mode)
-  "Text based major modes that also have `comment-start' defined.
-
-In these modes, auto-filling should be on for all text.  And
-boxing should recognize paragraphs as well as comment blocks.
-"
-  :type 'list
-  :group 'rebox)
-
-;;;###autoload
-(define-minor-mode rebox-mode
-  "Toggle rebox mode for managing text and comment boxes.
-
-1. Auto-filling is enabled, and comment boxes are auto-filled.  asd f asd f
-
-
-
-With no argument, this command toggles the mode.
-  Non-null prefix argument turns on the mode.
-  Null prefix argument turns off the mode.
-
-You don't need to enable the minor mode to use rebox2
-
-"
-  :init-value nil
-  :lighter rebox-mode-line-string
-  :keymap '(([(shift return)] . rebox-indent-new-line)
-            ([(meta q)] . rebox-dwim-fill)
-            ([(meta Q)] . rebox-dwim-no-fill)
-            ([(control a)] . rebox-beginning-of-line)
-            ([(control e)] . rebox-end-of-line)
-            ([(control k)] . rebox-kill-line)
-            ([(meta w)] . rebox-kill-ring-save)
-            ([(control y)] . rebox-yank)
-            ([(meta y)] . rebox-yank-pop)
-            ([(meta c)] . rebox-center)
-            (" " . rebox-space)
-            ([(backspace)] . rebox-backspace)
-
-            )
-  :group 'rebox
-  (if rebox-mode
-      (progn
-        (rebox-save-env)
-        (set (make-local-variable 'comment-auto-fill-only-comments)
-             (if (and (stringp comment-start)
-                      (not (zerop (length comment-start)))
-                      (not (memq major-mode rebox-hybrid-major-modes)))
-                 t
-               nil))
-        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill)
-        (auto-fill-mode 1))
-    (rebox-restore-env)))
-
-
-(define-global-minor-mode rebox-global-mode rebox-mode
-    rebox-mode
-  :group 'rebox)
-
-;; functions passed to rebox-engine inspect these variables
-(eval-when-compile
-  (defvar previous-nn)
-  (defvar previous-ne)
-  (defvar previous-sw)
-  (defvar previous-ss)
-  (defvar previous-se)
-  (defvar previous-margin)
-  (defvar previous-ee)
-  (defvar previous-nw)
-  (defvar unindent-count)
-  (defvar orig-m)
-  (defvar orig-col)
-  (defvar max-n)
-)
-
-(put 'rebox-error
-     'error-conditions
-     '(error rebox-error))
-
-(put 'rebox-comment-not-found-error
-     'error-conditions
-     '(error rebox-error rebox-comment-not-found-error))
-
-(put 'rebox-comment-not-found-error
-     'error-message
-     "Comment not found")
-
-(put 'rebox-mid-line-comment-found
-     'error-conditions
-     '(error rebox-error rebox-mid-line-comment-found))
-
-(put 'rebox-mid-line-comment-found
-     'error-message
-     "Comment started mid-line.")
-
-;; we don't use syntax table for whitespace definition here because we don't
-;; trust major-modes to define them properly.
-(defconst rebox-blank-line-regexp "^[ \t]*$")
+  (require 'cl))
 
 ;; Box templates.  First number is style, second is recognition weight.
 (defconst rebox-templates
@@ -699,6 +511,197 @@ You don't need to enable the minor mode to use rebox2
          "/*************/")
 
     ))
+
+
+(defvar rebox-default-style 15
+  "*Preferred style for box comments.  The buffer's
+`comment-start' is used with this style to arrive at the box
+style.")
+(make-variable-buffer-local 'rebox-default-style)
+
+(defvar rebox-save-env-alist nil
+  "backup value saved for here for mode deactivation")
+(make-variable-buffer-local 'rebox-save-env-alist)
+
+(defvar rebox-save-env-vars
+  '(comment-auto-fill-only-comments
+    auto-fill-function
+    normal-auto-fill-function)
+  "list of variables overwritten by `rebox-mode' to be saved.")
+
+(defvar rebox-default-unbox-style 11
+  "*Preferred style for unboxed comments.")
+(make-variable-buffer-local 'rebox-default-unbox-style)
+
+(defgroup rebox nil
+  "rebox."
+  :group 'convenience)
+
+(defcustom rebox-keep-blank-lines t
+  "Non-nil gives rebox permission to truncate blank lines at
+beginning of box, end, and more than three consecutive blank
+lines in the body of box."
+  :type 'boolean
+  :group 'rebox)
+
+(defcustom rebox-mode-line-string " rebox"
+  ""
+  :type 'string
+  :group 'rebox)
+
+(defcustom rebox-newline-indent-function-default 'comment-indent-new-line
+  "function called by `rebox-indent-new-line' when doesn't see a box."
+  :group 'rebox)
+
+(defvar rebox-newline-indent-function nil
+  "cached function for this buffer.")
+(make-variable-buffer-local 'rebox-newline-indent-function)
+
+(defcustom rebox-kill-line-function 'kill-line
+  "function called by `rebox-kill-line' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-kill-ring-save-function 'kill-ring-save
+  "function called by `rebox-kill-ring-save' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-beginning-of-line-function 'move-beginning-of-line
+  "function called by `rebox-beginning-of-line' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-end-of-line-function 'move-end-of-line
+  "function called by `rebox-end-of-line' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-yank-function 'yank
+  "function called by `rebox-yank' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-yank-pop-function 'yank-pop
+  "function called by `rebox-yank-pop' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-newline-indent-function-alist
+  '((c-mode   . c-indent-new-comment-line)
+    (c++-mode . c-indent-new-comment-line)
+    (org-mode . org-return-indent))
+  "list of (major-mode . function) for making a newline.
+
+The function should make and indent a new comment-line for the
+mode.  `comment-indent-newline' is the default.
+"
+  :type '(alist :key-type 'symbol
+                :value-type 'symbol)
+  :group 'rebox)
+
+(defcustom rebox-hybrid-major-modes
+  '(org-mode)
+  "Text based major modes that also have `comment-start' defined.
+
+In these modes, auto-filling should be on for all text.  And
+boxing should recognize paragraphs as well as comment blocks.
+"
+  :type 'list
+  :group 'rebox)
+
+;;;###autoload
+(define-minor-mode rebox-mode
+  "Toggle rebox mode for managing text and comment boxes.
+
+1. Auto-filling is enabled, and comment boxes are auto-filled.  asd f asd f
+
+
+
+With no argument, this command toggles the mode.
+  Non-null prefix argument turns on the mode.
+  Null prefix argument turns off the mode.
+
+You don't need to enable the minor mode to use rebox2
+
+"
+  :init-value nil
+  :lighter rebox-mode-line-string
+  :keymap '(([(shift return)] . rebox-indent-new-line)
+            ([(meta q)] . rebox-dwim-fill)
+            ([(meta Q)] . rebox-dwim-no-fill)
+            ([(control a)] . rebox-beginning-of-line)
+            ([(control e)] . rebox-end-of-line)
+            ([(control k)] . rebox-kill-line)
+            ([(meta w)] . rebox-kill-ring-save)
+            ([(control y)] . rebox-yank)
+            ([(meta y)] . rebox-yank-pop)
+            ([(meta c)] . rebox-center)
+            (" " . rebox-space)
+            ([(backspace)] . rebox-backspace)
+
+            )
+  :group 'rebox
+  (if rebox-mode
+      (progn
+        (rebox-save-env)
+        (set (make-local-variable 'comment-auto-fill-only-comments)
+             (if (and (stringp comment-start)
+                      (not (zerop (length comment-start)))
+                      (not (memq major-mode rebox-hybrid-major-modes)))
+                 t
+               nil))
+        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill)
+        (auto-fill-mode 1))
+    (rebox-restore-env)))
+
+
+(define-global-minor-mode rebox-global-mode rebox-mode
+    rebox-mode
+  :group 'rebox)
+
+;; functions passed to rebox-engine inspect these variables
+(eval-when-compile
+  (defvar previous-nn)
+  (defvar previous-ne)
+  (defvar previous-sw)
+  (defvar previous-ss)
+  (defvar previous-se)
+  (defvar previous-margin)
+  (defvar previous-ee)
+  (defvar previous-nw)
+  (defvar unindent-count)
+  (defvar orig-m)
+  (defvar orig-col)
+  (defvar max-n)
+  (defvar marked-point)
+  (defvar ww)
+)
+
+(put 'rebox-error
+     'error-conditions
+     '(error rebox-error))
+
+(put 'rebox-comment-not-found-error
+     'error-conditions
+     '(error rebox-error rebox-comment-not-found-error))
+
+(put 'rebox-comment-not-found-error
+     'error-message
+     "Comment not found")
+
+(put 'rebox-mid-line-comment-found
+     'error-conditions
+     '(error rebox-error rebox-mid-line-comment-found))
+
+(put 'rebox-mid-line-comment-found
+     'error-message
+     "Comment started mid-line.")
+
+;; we don't use syntax table for whitespace definition here because we don't
+;; trust major-modes to define them properly.
+(defconst rebox-blank-line-regexp "^[ \t]*$")
+
 
 ;; Template numbering dependent code.
 
@@ -1029,35 +1032,6 @@ returns t for refil nil for not.
         ('error
          (signal (car err) (cdr err)))))))
 
-(defun rebox-kill-yank-wrapper (mod-func orig-func)
-  (let ((orig-m (point-marker))
-        previous-style)
-    (condition-case err
-        (save-restriction
-          (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-          (when (and (use-region-p)
-                     (or (< (mark) (point-min))
-                         (> (mark) (point-max))))
-            (signal 'rebox-error "mark is out of box"))
-          (setq previous-style (rebox-guess-style))
-          (if (eq previous-style 111)
-              (signal 'rebox-error "style is 111")
-            (rebox-engine :style previous-style
-                          :marked-point orig-m
-                          :quiet t
-                          :refill nil
-                          :move-point nil
-                          :previous-style previous-style
-                          :mod-func
-                          mod-func)))
-      ('rebox-error
-       (goto-char orig-m)
-       (and orig-func
-            (call-interactively orig-func)))
-      ('error
-       (signal (car err) (cdr err))))))
-
-
 ;;;###autoload
 (defun rebox-kill-line (arg)
   (interactive "P*")
@@ -1099,35 +1073,6 @@ returns t for refil nil for not.
                              (call-interactively rebox-kill-ring-save-function)
                              (set-marker orig-m (point-marker)))
                            rebox-kill-ring-save-function))
-
-(defun rebox-left-border-wrapper (insp-func orig-func)
-  (let ((orig-m (point-marker))
-        (orig-col (current-column))
-        previous-style)
-    (condition-case err
-        (progn
-          (when (use-region-p)
-            (signal 'rebox-error "region used"))
-          (save-restriction
-            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-            (setq previous-style (rebox-guess-style))
-            (if (eq previous-style 111)
-                (signal 'rebox-error "style is 111")
-              (goto-char orig-m)
-              (rebox-engine :style previous-style
-                            :marked-point orig-m
-                            :quiet t
-                            :refill nil
-                            :move-point nil
-                            :previous-style previous-style
-                            :insp-func
-                            insp-func))))
-      ('rebox-error
-       (goto-char orig-m)
-       (and orig-func
-            (call-interactively orig-func)))
-      ('error
-       (signal (car err) (cdr err))))))
 
 (defun rebox-center ()
   "If point is in the left border of a box, center the box,
@@ -1191,36 +1136,6 @@ with argument N, move n columns."
                                    (call-interactively 'backward-delete-char-untabify))
                                  (throw 'rebox-engine-done t))
                                'backward-delete-char-untabify)))
-
-(defun rebox-ensure-region-whole-lines (r-beg r-end)
-  "Ensure region covered by r-beg and r-end are whole lines.
-
-R-BEG and R-END are markers.  We assume R-BEG < R-END.
-
-Returns t when changes were made to the markers."
-  (let (col
-        changes-made)
-    (goto-char r-beg)
-    (unless (bolp)
-      (setq changes-made t)
-      (setq col (current-column))
-      (beginning-of-line 1)
-      (unless (prog2
-                  (skip-chars-forward " \t")
-                  (>= (current-column) col))
-        (goto-char r-beg)
-        (insert "\n")
-        (indent-to col))
-      (set-marker r-beg (point-at-bol)))
-    (goto-char r-end)
-    (unless (bolp)
-      (setq changes-made t)
-      (if (and (looking-at-p "[ \t]*$")
-               (not (eobp)))
-          (set-marker r-end (point-at-bol 2))
-        (insert "\n")
-        (set-marker r-end (point))))
-    changes-made))
 
 ;;;###autoload
 (defun* rebox-region (r-beg r-end &key style (refill t) previous-style (quiet nil))
@@ -1530,7 +1445,96 @@ and indent.
         ('error
          (error "rebox-indent-new-line wrapper: %s" err))))))
 
+
 
+(defun rebox-kill-yank-wrapper (mod-func orig-func)
+  (let ((orig-m (point-marker))
+        previous-style)
+    (condition-case err
+        (save-restriction
+          (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+          (when (and (use-region-p)
+                     (or (< (mark) (point-min))
+                         (> (mark) (point-max))))
+            (signal 'rebox-error "mark is out of box"))
+          (setq previous-style (rebox-guess-style))
+          (if (eq previous-style 111)
+              (signal 'rebox-error "style is 111")
+            (rebox-engine :style previous-style
+                          :marked-point orig-m
+                          :quiet t
+                          :refill nil
+                          :move-point nil
+                          :previous-style previous-style
+                          :mod-func
+                          mod-func)))
+      ('rebox-error
+       (goto-char orig-m)
+       (and orig-func
+            (call-interactively orig-func)))
+      ('error
+       (signal (car err) (cdr err))))))
+
+(defun rebox-left-border-wrapper (insp-func orig-func)
+  (let ((orig-m (point-marker))
+        (orig-col (current-column))
+        previous-style)
+    (condition-case err
+        (progn
+          (when (use-region-p)
+            (signal 'rebox-error "region used"))
+          (save-restriction
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (setq previous-style (rebox-guess-style))
+            (if (eq previous-style 111)
+                (signal 'rebox-error "style is 111")
+              (goto-char orig-m)
+              (rebox-engine :style previous-style
+                            :marked-point orig-m
+                            :quiet t
+                            :refill nil
+                            :move-point nil
+                            :previous-style previous-style
+                            :insp-func
+                            insp-func))))
+      ('rebox-error
+       (goto-char orig-m)
+       (and orig-func
+            (call-interactively orig-func)))
+      ('error
+       (signal (car err) (cdr err))))))
+
+
+
+(defun rebox-ensure-region-whole-lines (r-beg r-end)
+  "Ensure region covered by r-beg and r-end are whole lines.
+
+R-BEG and R-END are markers.  We assume R-BEG < R-END.
+
+Returns t when changes were made to the markers."
+  (let (col
+        changes-made)
+    (goto-char r-beg)
+    (unless (bolp)
+      (setq changes-made t)
+      (setq col (current-column))
+      (beginning-of-line 1)
+      (unless (prog2
+                  (skip-chars-forward " \t")
+                  (>= (current-column) col))
+        (goto-char r-beg)
+        (insert "\n")
+        (indent-to col))
+      (set-marker r-beg (point-at-bol)))
+    (goto-char r-end)
+    (unless (bolp)
+      (setq changes-made t)
+      (if (and (looking-at-p "[ \t]*$")
+               (not (eobp)))
+          (set-marker r-end (point-at-bol 2))
+        (insert "\n")
+        (set-marker r-end (point))))
+    changes-made))
 
 (defun* rebox-engine (&key style
                            insp-func
