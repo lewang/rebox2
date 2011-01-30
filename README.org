@@ -1,0 +1,3 @@
+* Installation
+
+See commentary in rebox2.el.
