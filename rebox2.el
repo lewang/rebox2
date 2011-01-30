@@ -1451,23 +1451,27 @@ and indent.
   (let ((orig-m (point-marker))
         previous-style)
     (condition-case err
-        (save-restriction
-          (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-          (when (and (use-region-p)
-                     (or (< (mark) (point-min))
-                         (> (mark) (point-max))))
-            (signal 'rebox-error "mark is out of box"))
-          (setq previous-style (rebox-guess-style))
-          (if (eq previous-style 111)
-              (signal 'rebox-error "style is 111")
-            (rebox-engine :style previous-style
-                          :marked-point orig-m
-                          :quiet t
-                          :refill nil
-                          :move-point nil
-                          :previous-style previous-style
-                          :mod-func
-                          mod-func)))
+        (progn
+          (when (and current-prefix-arg
+                   (listp current-prefix-arg))
+              (signal 'rebox-error nil))
+          (save-restriction
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (when (and (use-region-p)
+                       (or (< (mark) (point-min))
+                           (> (mark) (point-max))))
+              (signal 'rebox-error "mark is out of box"))
+            (setq previous-style (rebox-guess-style))
+            (if (eq previous-style 111)
+                (signal 'rebox-error "style is 111")
+              (rebox-engine :style previous-style
+                            :marked-point orig-m
+                            :quiet t
+                            :refill nil
+                            :move-point nil
+                            :previous-style previous-style
+                            :mod-func
+                            mod-func))))
       ('rebox-error
        (goto-char orig-m)
        (and orig-func
