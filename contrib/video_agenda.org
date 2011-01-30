@@ -13,17 +13,36 @@
 * Demonstrate functionality - box, fill vs no-fill
 
    - using different styles
-     - cycling through "rebox-default-style" and "rebox-no-box-comment-style"
+     - cycling through "rebox-default-style" and "rebox-default-unbox-style"
        with rebox-dwim*
      - unboxing comments with '-' prefix
      - unboxing completely with "111" style.
      - boxing with specific style with "nnn" prefix
 
-   - all comments are boxes
+     - all comments are boxes
 
 * Alternatively, you can activate the rebox minor-mode when you need it:
 
     M-x rebox-mode
+
+* Customzie boxing styles
+
+  - `rebox-default-style' and `rebox-default-unbox-style'
+
+.------------------------------------------------------------------------.
+| ;; setup rebox for emacs-lisp                                          |
+| (add-hook 'emacs-lisp-mode-hook (lambda ()                             |
+|                                   (setq rebox-default-style 525)       |
+|                                   (setq rebox-default-unbox-style 521) |
+|                                   (rebox-mode 1)))                     |
+| ;; setup rebox for text                                                |
+| (add-hook 'text-mode-hook (lambda ()                                   |
+|                             (setq rebox-default-style 123)             |
+|                             (setq rebox-default-unbox-style 111)       |
+|                             (rebox-mode 1)))                           |
+|                                                                        |
+`------------------------------------------------------------------------'
+
 
 * Minor-mode features:
 
