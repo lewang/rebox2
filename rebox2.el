@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 11:35:30 2011 (+0800)
+;; Last-Updated: Sun Jan 30 12:59:27 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 166
+;;     Update #: 168
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -925,8 +925,12 @@ returns t for refil nil for not.
 
 ;;;###autoload
 (defun rebox-beginning-of-line (arg)
-  (interactive "P")
-  (let ((orig-m (point-marker))
+  "If point is in a box, go to beginning of text on first invocation.
+On second invocation, go to beginning of physical line.  Subsequent invocation switches between the two.
+
+If point is not in a box, call `rebox-beginning-of-line-function'"
+
+  (interactive "P") (let ((orig-m (point-marker))
         previous-style
         boxed-line-start-col)
     (save-restriction
@@ -977,6 +981,10 @@ returns t for refil nil for not.
 
 ;;;###autoload
 (defun rebox-end-of-line (arg)
+  "If point is in a box, go to end of text on first invocation.
+On second invocation, go to end of physical line.  Subsequent invocation switches between the two.
+
+If point is not in a box, call `rebox-beginning-of-line-function'"
   (interactive "P")
   (let ((orig-m (point-marker))
         previous-style
@@ -1034,6 +1042,14 @@ returns t for refil nil for not.
 
 ;;;###autoload
 (defun rebox-kill-line (arg)
+  "If point is in a box, unbox first, and then run
+`rebox-kill-line-function' as requested, unless region is
+selected, in which case, the region is killed.
+
+If point is not in a box, call `rebox-kill-line-function'.
+
+With universal ARG, always call `rebox-kill-line-function'.
+"
   (interactive "P*")
   (rebox-kill-yank-wrapper (lambda ()
                              (goto-char orig-m)
@@ -1051,6 +1067,12 @@ returns t for refil nil for not.
                            rebox-kill-line-function))
 
 (defun rebox-yank (arg)
+  "If point is in a box, unbox first, and then run `rebox-yank-function' as requested.
+
+If point is not in a box, call `rebox-yank-function'.
+
+With universal ARG, always call `rebox-yank-function'.
+"
   (interactive "P*")
   (rebox-kill-yank-wrapper (lambda ()
                              (goto-char orig-m)
@@ -1059,6 +1081,12 @@ returns t for refil nil for not.
                            rebox-yank-function))
 
 (defun rebox-yank-pop (arg)
+  "If point is in a box, unbox first, and then run `reobx-yank-pop-function' as requested.
+
+If point is not in a box, call `reobx-yank-pop-function'.
+
+With universal ARG, always call `reobx-yank-pop-function'.
+"
   (interactive "P*")
   (rebox-kill-yank-wrapper (lambda ()
                              (goto-char orig-m)
