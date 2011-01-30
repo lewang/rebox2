@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 12:59:27 2011 (+0800)
+;; Last-Updated: Sun Jan 30 14:20:21 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 168
+;;     Update #: 169
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1425,8 +1425,8 @@ and indent.
       (condition-case err
           (progn
             (setq orig-m (point-marker))
-            (set-marker-insertion-type orig-m t)
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (set-marker-insertion-type orig-m t)
             (setq style (rebox-guess-style))
             (if (not (eq style 111)) ; 111 is no-box
                 (progn
