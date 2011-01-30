@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 15:00:25 2011 (+0800)
+;; Last-Updated: Sun Jan 30 22:02:15 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 170
+;;     Update #: 171
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1185,7 +1185,8 @@ starts and ends on a newline.
                                 current-prefix-arg)))
                    (list (region-beginning) (region-end) :style style :refill
                          refill))))
-  (let ((r-end (progn
+  (let ((orig-m (point-marker))
+        (r-end (progn
                  (goto-char r-end)
                  (point-marker)))
         (r-beg (progn
@@ -1197,6 +1198,7 @@ starts and ends on a newline.
         (setq previous-style 111))
     (save-restriction
       (narrow-to-region r-beg r-end)
+      (goto-char orig-m)
       (rebox-engine :style style
                     :previous-style previous-style
                     :refill refill
