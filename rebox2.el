@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 02:51:02 2011 (+0800)
+;; Last-Updated: Sun Jan 30 11:18:26 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 162
+;;     Update #: 164
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -207,9 +207,9 @@ style.")
     normal-auto-fill-function)
   "list of variables overwritten by `rebox-mode' to be saved.")
 
-(defvar rebox-no-box-comment-style 11
+(defvar rebox-default-unbox-style 11
   "*Preferred style for unboxed comments.")
-(make-variable-buffer-local 'rebox-no-box-comment-style)
+(make-variable-buffer-local 'rebox-default-unbox-style)
 
 (defgroup rebox nil
   "rebox."
@@ -881,7 +881,7 @@ refilled with it."
         ((eq '- arg)
          (if ask
              (rebox-ask-for-style)
-           (rebox-get-style-for-major-mode rebox-no-box-comment-style)))
+           (rebox-get-style-for-major-mode rebox-default-unbox-style)))
         (t
          (when use-default
            (rebox-get-style-for-major-mode rebox-default-style)))))
@@ -1305,7 +1305,7 @@ This function processes prefix arg the same way as`rebox-comment' with the
 
             +----------------------------------------------------+
             | specifying `-' will unbox the region or comment to |
-            | `rebox-no-box-comment-style' with refill           |
+            | `rebox-default-unbox-style' with refill           |
             +----------------------------------------------------+
 "
   (interactive "*P")
@@ -1413,7 +1413,7 @@ This function processes prefix arg the same way as`rebox-comment' with the
 
             +----------------------------------------------------+
             | specifying `-' will unbox the region or comment to |
-            | `rebox-no-box-comment-style'                       |
+            | `rebox-default-unbox-style'                       |
             +----------------------------------------------------+
 "
   (interactive "*P")
