@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Feb  1 22:52:20 2011 (+0800)
+;; Last-Updated: Wed Feb  2 00:15:36 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 179
+;;     Update #: 182
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -952,13 +952,13 @@ If point is not in a box, call `rebox-beginning-of-line-function'"
                             :refill nil
                             :move-point nil
                             :previous-style previous-style
-                            :insp-func
+                            :before-insp-func
                             (lambda ()
                               (goto-char marked-point)
                               (if ;; top or bottom border
-                                  (or (and (or previous-nw previous-nn previous-ne)
+                                  (or (and previous-regexp1
                                            (eq (line-number-at-pos) 1))
-                                      (and (or previous-sw previous-ss previous-se)
+                                      (and previous-regexp3
                                            (eq (line-number-at-pos) (1- (line-number-at-pos (point-max))))))
                                   (setq boxed-line-start-col previous-margin)
                                 (save-restriction
@@ -1007,14 +1007,14 @@ If point is not in a box, call `rebox-beginning-of-line-function'"
                             :refill nil
                             :move-point nil
                             :previous-style previous-style
-                            :insp-func
+                            :before-insp-func
                             (lambda ()
                               (goto-char orig-m)
                               (beginning-of-line)
                               (if ;; top or bottom border
-                                  (or (and (or previous-nw previous-nn previous-ne)
+                                  (or (and previous-regexp1
                                            (eq (line-number-at-pos) 1))
-                                      (and (or previous-sw previous-ss previous-se)
+                                      (and previous-regexp3
                                            (eq (line-number-at-pos) (1- (line-number-at-pos (point-max))))))
                                   (setq boxed-line-end-col (point-at-eol))
                                 (setq boxed-line-end-col
@@ -1057,20 +1057,50 @@ If point is not in a box, call `rebox-kill-line-function'.
 With universal ARG, always call `rebox-kill-line-function'.
 "
   (interactive "P*")
-  (rebox-kill-yank-wrapper (lambda ()
-                             (goto-char orig-m)
-                             (condition-case err
-                                 (progn
-                                   (if (use-region-p)
-                                       (progn
-                                         (kill-region (region-beginning) (region-end))
-                                         (goto-char (point-max))
-                                         (unless (bolp)
-                                           (insert "\n")))
-                                     (call-interactively rebox-kill-line-function)))
-                               ('end-of-buffer
-                                (message "end of box reached, aborting %s." this-command))))
-                           rebox-kill-line-function))
+  (let (orig-col orig-line)
+    (rebox-kill-yank-wrapper :before-insp-func
+                             (lambda ()
+                               (goto-char marked-point)
+                               (setq orig-line (if previous-regexp1
+                                                   (1- (line-number-at-pos))
+                                                 (line-number-at-pos)))
+                               (setq orig-col (- (current-column) unindent-count)))
+                             :mod-func
+                             (lambda ()
+                               (goto-char marked-point)
+                               (condition-case err
+                                   (progn
+                                     (if (use-region-p)
+                                         (progn
+                                           (kill-region (region-beginning) (region-end))
+                                           (goto-char (point-max))
+                                           ;; ensure narrowed region is still valid
+                                           (unless (bolp)
+                                             (insert "\n")))
+                                       (call-interactively rebox-kill-line-function)))
+                                 ('end-of-buffer
+                                  (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
+                                                           ,@(cdr err))))))
+                             :after-insp-func
+                             (lambda ()
+                               ;; try to fix the point
+                               (goto-char marked-point)
+                               (let ((new-line-num (if regexp1
+                                                       (1- (line-number-at-pos))
+                                                     (line-number-at-pos)))
+                                     (new-col (- (current-column) previous-margin (length ww))))
+                                 (when (and (< new-line-num 1)
+                                            (>= orig-line 1))
+                                   ;; goto-line
+                                   (goto-char (point-min))
+                                   (forward-line (1- (+ orig-line (if regexp1 1 0)))))
+                                 (when (and (< new-col 0)
+                                            (>= orig-col 0))
+                                   (move-beginning-of-line 1)
+                                   (rebox-beginning-of-line 1))
+                                 (set-marker marked-point (point))))
+                             :orig-func
+                             rebox-kill-line-function)))
 
 (defun rebox-yank (arg)
   "If point is in a box, unbox first, and then run `rebox-yank-function' as requested.
@@ -1080,10 +1110,12 @@ If point is not in a box, call `rebox-yank-function'.
 With universal ARG, always call `rebox-yank-function'.
 "
   (interactive "P*")
-  (rebox-kill-yank-wrapper (lambda ()
+  (rebox-kill-yank-wrapper :mod-func
+                           (lambda ()
                              (goto-char orig-m)
                              (call-interactively 'yank)
                              (set-marker orig-m (point)))
+                           :orig-func
                            rebox-yank-function))
 
 (defun rebox-yank-pop (arg)
@@ -1094,18 +1126,22 @@ If point is not in a box, call `reobx-yank-pop-function'.
 With universal ARG, always call `reobx-yank-pop-function'.
 "
   (interactive "P*")
-  (rebox-kill-yank-wrapper (lambda ()
+  (rebox-kill-yank-wrapper :mod-func
+                           (lambda ()
                              (goto-char orig-m)
                              (call-interactively 'yank-pop)
                              (set-marker orig-m (point)))
+                           :orig-func
                            rebox-yank-pop-function))
 
 (defun rebox-kill-ring-save (arg)
   (interactive "P")
-  (rebox-kill-yank-wrapper (lambda ()
+  (rebox-kill-yank-wrapper :mod-func
+                           (lambda ()
                              (goto-char orig-m)
                              (call-interactively rebox-kill-ring-save-function)
                              (set-marker orig-m (point-marker)))
+                           :orig-func
                            rebox-kill-ring-save-function))
 
 (defun rebox-center ()
@@ -1493,7 +1529,7 @@ and indent.
 
 
 
-(defun rebox-kill-yank-wrapper (mod-func orig-func)
+(defun* rebox-kill-yank-wrapper (&key mod-func orig-func before-insp-func after-insp-func)
   (let ((orig-m (point-marker))
         previous-style)
     (condition-case err
@@ -1516,8 +1552,12 @@ and indent.
                             :refill nil
                             :move-point nil
                             :previous-style previous-style
+                            :before-insp-func
+                            before-insp-func
                             :mod-func
-                            mod-func))))
+                            mod-func
+                            :after-insp-func
+                            after-insp-func))))
       ('rebox-error
        (goto-char orig-m)
        (and orig-func
@@ -1525,7 +1565,7 @@ and indent.
       ('error
        (signal (car err) (cdr err))))))
 
-(defun rebox-left-border-wrapper (insp-func orig-func)
+(defun rebox-left-border-wrapper (before-insp-func orig-func)
   (let ((orig-m (point-marker))
         (orig-col (current-column))
         previous-style)
@@ -1545,8 +1585,8 @@ and indent.
                             :refill nil
                             :move-point nil
                             :previous-style previous-style
-                            :insp-func
-                            insp-func))))
+                            :before-insp-func
+                            before-insp-func))))
       ('rebox-error
        (goto-char orig-m)
        (and orig-func
@@ -1587,8 +1627,10 @@ Returns t when changes were made to the markers."
     changes-made))
 
 (defun* rebox-engine (&key style
-                           insp-func
+                           before-insp-func
                            mod-func
+                           before-insp-func
+                           after-insp-func
                            (refill t)
                            (previous-style nil)
                            (quiet nil)
@@ -1606,6 +1648,9 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (previous-style (or previous-style
                              (rebox-guess-style)))
          (previous-style-data (cdr (assq previous-style rebox-style-data)))
+         (previous-regexp1 (aref previous-style-data 1))
+         (previous-regexp2 (aref previous-style-data 2))
+         (previous-regexp3 (aref previous-style-data 3))
          (previous-merge-nw (aref previous-style-data 4))
          (previous-merge-se (aref previous-style-data 5))
          (previous-nw (aref previous-style-data 6))
@@ -1619,6 +1664,9 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (style (or style previous-style))
          (style-data (or (cdr (assq style rebox-style-data))
                          (signal 'rebox-comment-not-found-error (list (format "style (%s) is unknown" style)))))
+         (regexp1 (aref style-data 1))
+         ;; (regexp2 (aref style-data 2))
+         ;; (regexp3 (aref style-data 3))
          (ww (aref style-data 9))
          (unindent-count (+ previous-margin (length previous-ww)))
          ;; (marked-col-within-box (progn
@@ -1634,10 +1682,13 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
                    style
                    (concat (when refill
                              ", refilling")
-                           (when insp-func
-                             ", running insp-func")
+                           (when before-insp-func
+                             ", running before-insp-func")
                            (when mod-func
-                             ", running mod-func")))
+                             ", running mod-func")
+                           (when after-insp-func
+                             ", running after-insp-func")
+                           ))
         (message "Style: %d -> %d" (or previous-style 0) style)))
 
     ;; attempt to box only spaces
@@ -1658,10 +1709,10 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
     (catch 'rebox-engine-done
       ;; inspect the box
-      (when insp-func
-        (if (functionp insp-func)
-            (funcall insp-func)
-          (error "%s is not a function" insp-func)))
+      (when before-insp-func
+        (if (functionp before-insp-func)
+            (funcall before-insp-func)
+          (error "%s is not a function" before-insp-func)))
 
       ;; if we don't set the insertion type, and it gets pulled to the beginning
       ;; of line, it will get stuck there.
@@ -1742,6 +1793,11 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
             (move-to-column marked-col)
             (set-marker marked-point (point))))
       (goto-char marked-point))
+
+    (when after-insp-func
+      (if (functionp after-insp-func)
+          (funcall after-insp-func)
+        (error "%s is not a function" after-insp-func)))
 
     ;; Remove all intermediate boundaries from the undo list.
     (unless (eq buffer-undo-list undo-list)
