@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Feb  1 21:52:45 2011 (+0800)
+;; Last-Updated: Tue Feb  1 22:06:33 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 175
+;;     Update #: 178
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -685,6 +685,10 @@ You don't need to enable the minor mode to use rebox2
      '(error rebox-error))
 
 (put 'rebox-comment-not-found-error
+     'error-message
+     "rebox error")
+
+(put 'rebox-comment-not-found-error
      'error-conditions
      '(error rebox-error rebox-comment-not-found-error))
 
@@ -941,7 +945,7 @@ If point is not in a box, call `rebox-beginning-of-line-function'"
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (setq previous-style (rebox-guess-style))
             (if (eq previous-style 111)
-                (signal 'rebox-error "style is 111")
+                (signal 'rebox-error '("style is 111"))
               (rebox-engine :style previous-style
                             :marked-point orig-m
                             :quiet t
@@ -997,7 +1001,7 @@ If point is not in a box, call `rebox-beginning-of-line-function'"
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (setq previous-style (rebox-guess-style))
             (if (eq previous-style 111)
-                (signal 'rebox-error "style is 111")
+                (signal 'rebox-error '("style is 111"))
               (rebox-engine :style previous-style
                             :quiet t
                             :refill nil
@@ -1502,10 +1506,10 @@ and indent.
             (when (and (use-region-p)
                        (or (< (mark) (point-min))
                            (> (mark) (point-max))))
-              (signal 'rebox-error "mark is out of box"))
+              (signal 'rebox-error '("mark is out of box")))
             (setq previous-style (rebox-guess-style))
             (if (eq previous-style 111)
-                (signal 'rebox-error "style is 111")
+                (signal 'rebox-error '("style is 111"))
               (rebox-engine :style previous-style
                             :marked-point orig-m
                             :quiet t
@@ -1528,12 +1532,12 @@ and indent.
     (condition-case err
         (progn
           (when (use-region-p)
-            (signal 'rebox-error "region used"))
+            (signal 'rebox-error '("region used")))
           (save-restriction
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (setq previous-style (rebox-guess-style))
             (if (eq previous-style 111)
-                (signal 'rebox-error "style is 111")
+                (signal 'rebox-error '("style is 111"))
               (goto-char orig-m)
               (rebox-engine :style previous-style
                             :marked-point orig-m
@@ -1614,7 +1618,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (previous-se (aref previous-style-data 13))
          (style (or style previous-style))
          (style-data (or (cdr (assq style rebox-style-data))
-                         (signal 'rebox-error (format "style \"%s\"is unknown" style))))
+                         (signal 'rebox-comment-not-found-error (list (format "style (%s) is unknown" style)))))
          (ww (aref style-data 9))
          (unindent-count (+ previous-margin (length previous-ww)))
          ;; (marked-col-within-box (progn
@@ -1640,7 +1644,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
     (goto-char (point-min))
     (skip-chars-forward " \t\n")
     (when (not (< (point) (point-max)))
-      (signal 'rebox-error "Cannot box region consisting of only spaces."))
+      (signal 'rebox-error '("Cannot box region consisting of only spaces.")))
 
     ;; untabify, but preserve position of marked-point
     (let ((marked-col (progn
