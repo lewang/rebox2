@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Feb  1 22:06:33 2011 (+0800)
+;; Last-Updated: Tue Feb  1 22:52:20 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 178
+;;     Update #: 179
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1699,7 +1699,11 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
       ;; modify the box
       (when mod-func
         (if (functionp mod-func)
-            (funcall mod-func)
+            (let (
+                  ;; in case editing functions check major-mode for
+                  ;; indentation, etc.
+                  (major-mode 'fundamental-mode))
+              (funcall mod-func))
           (error "%s is not a function" mod-func)))
 
       ;; empty boxes are allowed if we are just doing an autofill, otherwise
