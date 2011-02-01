@@ -1471,6 +1471,16 @@ and indent.
                   (move-to-column text-beg-col t))
               (goto-char orig-m)
               (call-interactively (rebox-get-newline-indent-function))))
+        ('rebox-error
+         (let ((err-marker (point-marker))
+               (saved-func (rebox-get-newline-indent-function)))
+           (goto-char orig-m)
+           (cond ((eq (car err) 'rebox-comment-not-found-error)
+                  (message "rebox-indent-new-line: unable to find comment, calling %s."
+                           saved-func))
+                 ((eq (car err) 'rebox-mid-line-comment-found)
+                  (message "midline comment found at (%s), calling %s" err-marker saved-func)))
+           (call-interactively saved-func)))
         ('rebox-comment-not-found-error
          (message "rebox-indent-new-line: unable to find comment, calling saved function.")
          (call-interactively (rebox-get-newline-indent-function)))
