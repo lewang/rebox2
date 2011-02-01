@@ -847,7 +847,7 @@ refilled with it."
                                 (t (rebox-rstrip (substring line3 (match-end 0))))))
            (setq regexp1 (cond
                           (merge-nw
-                           (concat "^[ \t]*" (rebox-regexp-quote nw :rstrip nil) "[ \t]*\n"))
+                           (concat "^[ \t]*" (rebox-regexp-quote nw :rstrip nil) "\n"))
                           ((and nw (not nn) (not ne))
                            (concat "^[ \t]*" (rebox-regexp-quote nw :rstrip nil) "\n"))
                           ((or nw nn ne)
