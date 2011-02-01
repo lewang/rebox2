@@ -4,7 +4,7 @@
 ;; Description:
 ;; Author: François Pinard
 ;;         Le Wang
-;; Maintainer: Le Wang
+;; Maintainer: Le Wang (lewang.emacs!!!gmayo.com remove exclamations, correct host, hint: google mail)
 
 ;; Copyright © 2011 Le Wang
 ;; Copyright © 1991,92,93,94,95,96,97,98,00 Progiciels Bourbeau-Pinard inc.
@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sun Jan 30 22:02:15 2011 (+0800)
+;; Last-Updated: Tue Feb  1 21:52:45 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 171
+;;     Update #: 175
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -323,12 +323,12 @@
         "?| box123456"
         "?`----------")
 
-    (26 136
+    (26 236
         "??,----"
         "??| box123456"
         "??`----")
 
-    (27 236
+    (27 136
         "??,----------"
         "??| box123456"
         "??`----------")
@@ -385,7 +385,7 @@
 
     ;; boxquote style
 
-    (126 125
+    (126 225
          ",----"
          "| box123456"
          "`----")
