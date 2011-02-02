@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Wed Feb  2 00:15:36 2011 (+0800)
+;; Last-Updated: Wed Feb  2 09:34:23 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 182
+;;     Update #: 184
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -934,9 +934,14 @@ returns t for refil nil for not.
   "If point is in a box, go to beginning of text on first invocation.
 On second invocation, go to beginning of physical line.  Subsequent invocation switches between the two.
 
-If point is not in a box, call `rebox-beginning-of-line-function'"
+If point is not in a box, call `rebox-beginning-of-line-function'
 
-  (interactive "P") (let ((orig-m (point-marker))
+ARG argument is prefix argument, only used by 'rebox-beginning-of-line-function'
+
+"
+
+  (interactive "P")
+  (let ((orig-m (point-marker))
         previous-style
         boxed-line-start-col)
     (save-restriction
