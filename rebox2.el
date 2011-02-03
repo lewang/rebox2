@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Wed Feb  2 09:34:23 2011 (+0800)
+;; Last-Updated: Thu Feb  3 01:58:08 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 184
+;;     Update #: 193
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -678,6 +678,8 @@ You don't need to enable the minor mode to use rebox2
   (defvar max-n)
   (defvar marked-point)
   (defvar ww)
+  (defvar previous-regexp1)
+  (defvar regexp1)
 )
 
 (put 'rebox-error
@@ -1115,7 +1117,8 @@ If point is not in a box, call `rebox-yank-function'.
 With universal ARG, always call `rebox-yank-function'.
 "
   (interactive "P*")
-  (rebox-kill-yank-wrapper :mod-func
+  (rebox-kill-yank-wrapper :not-at-nw t
+                           :mod-func
                            (lambda ()
                              (goto-char orig-m)
                              (call-interactively 'yank)
@@ -1131,7 +1134,8 @@ If point is not in a box, call `reobx-yank-pop-function'.
 With universal ARG, always call `reobx-yank-pop-function'.
 "
   (interactive "P*")
-  (rebox-kill-yank-wrapper :mod-func
+  (rebox-kill-yank-wrapper :not-at-nw t
+                           :mod-func
                            (lambda ()
                              (goto-char orig-m)
                              (call-interactively 'yank-pop)
@@ -1141,13 +1145,17 @@ With universal ARG, always call `reobx-yank-pop-function'.
 
 (defun rebox-kill-ring-save (arg)
   (interactive "P")
-  (rebox-kill-yank-wrapper :mod-func
-                           (lambda ()
-                             (goto-char orig-m)
-                             (call-interactively rebox-kill-ring-save-function)
-                             (set-marker orig-m (point-marker)))
-                           :orig-func
-                           rebox-kill-ring-save-function))
+  (let ((mod-p (buffer-modified-p)))
+    (rebox-kill-yank-wrapper :try-whole-box t
+                             :mod-func
+                             (lambda ()
+                               (goto-char orig-m)
+                               (call-interactively rebox-kill-ring-save-function)
+                               (set-marker orig-m (point-marker)))
+                             :orig-func
+                             rebox-kill-ring-save-function)
+    ;; kill-ring-save shouldn't change buffer-modified status
+    (set-buffer-modified-p mod-p)))
 
 (defun rebox-center ()
   "If point is in the left border of a box, center the box,
@@ -1404,7 +1412,8 @@ This function processes prefix arg the same way as`rebox-comment' with the
 (defun rebox-dwim-no-fill (arg)
   "Rebox region or comment, never refilling.
 
-This function processes prefix arg the same way as`rebox-comment' with the
+This function processes prefix arg the same way as`rebox-comment'
+with the
   exception that:
 
             +----------------------------------------------------+
@@ -1436,18 +1445,19 @@ This function processes prefix arg the same way as`rebox-comment' with the
               (progn
                 (goto-char orig-m)
                 (do-auto-fill))
-              (goto-char orig-m)
-              (rebox-engine :previous-style style
-                            :refill 'auto-fill
-                            :quiet t
-                            :move-point nil)
+            (goto-char orig-m)
+            (rebox-engine :previous-style style
+                          :refill 'auto-fill
+                          :quiet t
+                          :move-point nil)
             ;; This is hacky.  If you press enter on the end of the bottom
             ;; border of a box, the marker will move to the beginning of
             ;; next line.
             ;;
             ;; However, as a part of normal fill action, the point cannot be
             ;; at bol, so we just move it back one?  Is this _right_?
-            (when (and (bolp)
+            (when (and (eq last-input-event 'return)
+                       (bolp)
                        ;; when pressing space in the NW corner of box
                        (not (bobp)))
               (backward-char))
@@ -1538,16 +1548,21 @@ and indent.
 
 
 
-(defun* rebox-kill-yank-wrapper (&key mod-func orig-func before-insp-func after-insp-func)
+(defun* rebox-kill-yank-wrapper (&key try-whole-box not-at-nw mod-func orig-func before-insp-func after-insp-func)
   (let ((orig-m (point-marker))
         previous-style)
     (condition-case err
         (progn
           (when (and current-prefix-arg
-                   (listp current-prefix-arg))
-              (signal 'rebox-error nil))
+                     (listp current-prefix-arg))
+            ;; call orig-func
+            (signal 'rebox-error nil))
           (save-restriction
-            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments
+                                   :try-whole-box try-whole-box)
+            (when (and (= orig-m (point-min))
+                       not-at-nw)
+              (signal 'rebox-error '("mark is out of box")))
             (when (and (use-region-p)
                        (or (< (mark) (point-min))
                            (> (mark) (point-max))))
@@ -1784,12 +1799,10 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
     ;; Retabify to the left only (adapted from tabify.el).
     (if indent-tabs-mode
         (let ((marked-col (progn
-			    ;; Filename: rebox2.el hack to get around emacs
-			    ;; bug, if this format line isn't here and
-			    ;; `indent-tabs-mode' is t,
-			    ;; rebox-beginning-of-line doesn't work as
-			    ;; expected
-			    (format "%s" marked-point)
+                            ;; bug # 7946 workaround
+                            ;; should be fixed in next emacs23 release after 23.2.1
+			    (set-buffer (current-buffer))
+                             (format "%s" marked-point)
 			    (goto-char marked-point)
                             (current-column))))
           (goto-char (point-min))
@@ -1823,12 +1836,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
 ;; Classification of boxes (and also, construction data).
 
-
-(defun* rebox-find-and-narrow (&key (comment-only t))
-"Find the limits of the block of comments following or enclosing
-the cursor, or return an error if the cursor is not within such a
-block of comments.  Extend it as far as possible in both
-directions, then narrow the buffer around it."
+(defun rebox-find-box-beg-end (comment-only)
   (let ((orig-p (point))
         (has-comment-definition (and comment-start
                                      (not (zerop (length comment-start)))))
@@ -1836,8 +1844,8 @@ directions, then narrow the buffer around it."
     (if has-comment-definition
         ;; are we inside a comment?
         (when (progn
-              (goto-char (point-at-eol))
-              (rebox-line-has-comment :move-multiline nil))
+                (goto-char (point-at-eol))
+                (rebox-line-has-comment :move-multiline nil))
           (setq comment-b (point-at-bol))
           (goto-char (point-at-eol 0))  ; previous line's eol
           (catch 'roo
@@ -1879,11 +1887,40 @@ directions, then narrow the buffer around it."
                         (goto-char (point-max))
                         (insert "\n")
                         (point))))
+    (list comment-b comment-e)))
+
+(defun* rebox-find-and-narrow (&key (comment-only t) (try-whole-box nil))
+  "Find the limits of the block of comments following or enclosing
+the cursor, or return an error if the cursor is not within such a
+block of comments.  Extend it as far as possible in both
+directions, then narrow the buffer around it."
+  (let ((orig-p (point))
+        comment-b comment-e
+        temp
+        got-it)
+    (setq temp (rebox-find-box-beg-end comment-only))
+    (setq comment-b (car temp))
+    (setq comment-e (cadr temp))
     (if (or (not comment-b)
-            (not comment-e)
-            (eq comment-b comment-e))
-        (signal 'rebox-comment-not-found-error nil))
-    (narrow-to-region comment-b comment-e)))
+            (not comment-e))
+        (when try-whole-box
+          (progn
+            (goto-char orig-p)
+            (when (and (bolp)
+                       (not (bobp)))
+              (progn
+                (backward-char)
+                (setq temp (rebox-find-box-beg-end comment-only))
+                (setq comment-b (car temp))
+                (setq comment-e (cadr temp))
+                (when (and comment-b
+                           comment-e
+                           (= comment-e orig-p))
+                  (setq got-it t))))))
+      (setq got-it t))
+    (if got-it
+        (narrow-to-region comment-b comment-e)
+      (signal 'rebox-comment-not-found-error nil))))
 
 (defun rebox-guess-language (my-comment-start-str)
   "Guess the language in use based on the comment-start character.
@@ -2338,6 +2375,7 @@ count trailing spaces or t to always count.
 
 (defun rebox-save-env ()
   "load some settings"
+  (setq rebox-save-env-alist nil)
   (mapc (lambda (var)
           (push (cons var (symbol-value var)) rebox-save-env-alist))
         rebox-save-env-vars)
