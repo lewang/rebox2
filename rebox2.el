@@ -1777,7 +1777,8 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
             (let (
                   ;; in case editing functions check major-mode for
                   ;; indentation, etc.
-                  (major-mode 'fundamental-mode))
+                  (major-mode 'fundamental-mode)
+                  (fill-column (- fill-column (+ (length ww) (length ee) previous-margin))))
               (funcall mod-func))
           (error "%s is not a function" mod-func)))
 
