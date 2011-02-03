@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Feb  3 12:50:15 2011 (+0800)
+;; Last-Updated: Thu Feb  3 13:14:21 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 195
+;;     Update #: 196
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2216,11 +2216,9 @@ box STYLE."
     ;; Possibly refill, and adjust margins to account for left inserts.
     (if refill
         (let (;;;; whatever adaptive filling should take care of this
-              (fill-prefix (if (or adaptive-fill-mode
-                                   (and (featurep 'filladapt)
-                                        filladapt-mode))
-                               nil
-                           (make-string margin ? )))
+              (fill-prefix nil)
+              ;; In a box, we don't want mode-specific fill functions
+              (fill-paragraph-function nil)
               (fill-column (- fill-column (+ (length ww) (length ee) margin)))
               ;; some filling functions will consult major-mode for filling
               ;; advice, we don't want this since we've removed the
