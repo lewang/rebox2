@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Feb  3 13:14:21 2011 (+0800)
+;; Last-Updated: Thu Feb  3 13:24:51 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 196
+;;     Update #: 197
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1697,9 +1697,18 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (style-data (or (cdr (assq style rebox-style-data))
                          (signal 'rebox-comment-not-found-error (list (format "style (%s) is unknown" style)))))
          (regexp1 (aref style-data 1))
-         ;; (regexp2 (aref style-data 2))
-         ;; (regexp3 (aref style-data 3))
+         (regexp2 (aref style-data 2))
+         (regexp3 (aref style-data 3))
+         (merge-nw (aref style-data 4))
+         (merge-se (aref style-data 5))
+         (nw (aref style-data 6))
+         (nn (aref style-data 7))
+         (ne (aref style-data 8))
          (ww (aref style-data 9))
+         (ee (aref style-data 10))
+         (sw (aref style-data 11))
+         (ss (aref style-data 12))
+         (se (aref style-data 13))
          (unindent-count (+ previous-margin (length previous-ww)))
          ;; (marked-col-within-box (progn
          ;;                          (goto-char marked-point)
