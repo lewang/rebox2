@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Feb  3 01:58:08 2011 (+0800)
+;; Last-Updated: Thu Feb  3 12:50:15 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 193
+;;     Update #: 195
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -558,6 +558,16 @@ lines in the body of box."
 (defvar rebox-newline-indent-function nil
   "cached function for this buffer.")
 (make-variable-buffer-local 'rebox-newline-indent-function)
+
+(defcustom rebox-backspace-function 'backward-delete-char-untabify
+  "function called by `rebox-backpace' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-space-function 'self-insert-command
+  "function called by `rebox-space' when no box is found."
+  :type 'symbol
+  :group 'rebox)
 
 (defcustom rebox-kill-line-function 'kill-line
   "function called by `rebox-kill-line' when no box is found."
@@ -1177,7 +1187,7 @@ with argument N, move n columns."
 
 (defun rebox-space (n)
   "If point is in the left border of a box, move box to the right,
-else self-insert.
+else calls `rebox-space-function'.
 
 with argument N, move n columns."
   (interactive "p*")
@@ -1190,16 +1200,16 @@ with argument N, move n columns."
                                                        (progn (goto-char (point-max))
                                                               (point-at-bol 0))
                                                        (make-string n ? )))
-                                 (call-interactively 'self-insert-command)
+                                 (call-interactively rebox-space-function)
                                  ;; we can't change insertion-type in case
                                  ;; this is the last column of the box
                                  (set-marker orig-m (point)))
                                (throw 'rebox-engine-done t))
-                             'self-insert-command))
+                             rebox-space-function))
 
 (defun rebox-backspace (n)
   "If point is in the left border of a box, move box to the left,
-else call `backward-delete-char-untabify'.
+else call `rebox-backspace-function'.
 
 with argument N, move n columns."
   (interactive "*p")
@@ -1216,9 +1226,9 @@ with argument N, move n columns."
                                                                 (move-to-column max-n))
                                                               (point)))
                                    (goto-char orig-m)
-                                   (call-interactively 'backward-delete-char-untabify))
+                                   (call-interactively rebox-backspace-function))
                                  (throw 'rebox-engine-done t))
-                               'backward-delete-char-untabify)))
+                               rebox-backspace-function)))
 
 ;;;###autoload
 (defun* rebox-region (r-beg r-end &key style (refill t) previous-style (quiet nil))
@@ -1442,9 +1452,7 @@ with the
           (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
           (setq style (rebox-guess-style))
           (if (= style 111)
-              (progn
-                (goto-char orig-m)
-                (do-auto-fill))
+              (signal 'rebox-error nil)
             (goto-char orig-m)
             (rebox-engine :previous-style style
                           :refill 'auto-fill
