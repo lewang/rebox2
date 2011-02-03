@@ -1287,6 +1287,8 @@ prefix arg is processed thusly:
 (defun rebox-dwim-fill (arg)
   "On first invocation, fill region or comment, unless style requested through prefix arg.
 
+If comment is not found, call fill-paragraph.
+
 On second consecutive invocation, box region or comment using
 prefix arg specified style or `rebox-default-style'.
 
@@ -1391,7 +1393,9 @@ This function processes prefix arg the same way as`rebox-comment' with the
                             :marked-point orig-m
                             :quiet t)))
         ('rebox-error
-         (signal (car err) (cdr err)))
+         (message "rebox returned: %s, calling `fill-paragraph'" err)
+         (goto-char orig-m)
+         (call-interactively 'fill-paragraph))
         ('error
          (error "rebox-dwim-fill wrapper: %s" err))))
     (goto-char orig-m)))
