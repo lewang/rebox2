@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Mon Feb  7 14:19:00 2011 (+0800)
+;; Last-Updated: Tue Feb  8 00:42:25 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 198
+;;     Update #: 201
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1455,28 +1455,23 @@ with the
               (signal 'rebox-error nil)
             (goto-char orig-m)
             (rebox-engine :previous-style style
+                          :marked-point orig-m
                           :refill 'auto-fill
                           :quiet t
-                          :move-point nil)
-            (when (bolp)
-              ;; This is hacky.  If you press enter on the end of the bottom
-              ;; border of a box, the marker will move to the beginning of
-              ;; next line.
-              ;;
-              ;; However, as a part of normal fill action, the point cannot be
-              ;; at bol, so we just move it back one?  Is this _right_?
-              (if (and (eq last-input-event 'return)
-                       ;; when pressing space in the NW corner of box
-                       (not (bobp)))
-                  (backward-char)
-                ;; we end up at bol when pressing space switches from one
-                ;; style to another, e.g.
-                ;;
-                ;;   ;;[]text
-                ;;
-                ;; cursor at box and we press space.
-                (rebox-beginning-of-line 1)))
-              ))
+                          :move-point nil
+                          :before-insp-func
+                          (lambda ()
+                            (goto-char marked-point)
+                            ;; top or bottom or left or right border
+                            (when (or (and previous-regexp1
+                                           (eq (line-number-at-pos) 1))
+                                      (and previous-regexp3
+                                           (eq (line-number-at-pos) (1- (line-number-at-pos (point-max)))))
+                                      (< (current-column) unindent-count)
+                                      (and previous-ee
+                                           (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
+                                           (looking-at-p "[ \t]*$")))
+                              (signal 'rebox-error nil))))))
       ('rebox-error
        (goto-char orig-m)
        (do-auto-fill))
