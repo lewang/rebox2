@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Feb  3 13:24:51 2011 (+0800)
+;; Last-Updated: Mon Feb  7 14:19:00 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 197
+;;     Update #: 198
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1458,18 +1458,25 @@ with the
                           :refill 'auto-fill
                           :quiet t
                           :move-point nil)
-            ;; This is hacky.  If you press enter on the end of the bottom
-            ;; border of a box, the marker will move to the beginning of
-            ;; next line.
-            ;;
-            ;; However, as a part of normal fill action, the point cannot be
-            ;; at bol, so we just move it back one?  Is this _right_?
-            (when (and (eq last-input-event 'return)
-                       (bolp)
+            (when (bolp)
+              ;; This is hacky.  If you press enter on the end of the bottom
+              ;; border of a box, the marker will move to the beginning of
+              ;; next line.
+              ;;
+              ;; However, as a part of normal fill action, the point cannot be
+              ;; at bol, so we just move it back one?  Is this _right_?
+              (if (and (eq last-input-event 'return)
                        ;; when pressing space in the NW corner of box
                        (not (bobp)))
-              (backward-char))
-            ))
+                  (backward-char)
+                ;; we end up at bol when pressing space switches from one
+                ;; style to another, e.g.
+                ;;
+                ;;   ;;[]text
+                ;;
+                ;; cursor at box and we press space.
+                (rebox-beginning-of-line 1)))
+              ))
       ('rebox-error
        (goto-char orig-m)
        (do-auto-fill))
