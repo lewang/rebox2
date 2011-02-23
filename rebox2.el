@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Fri Feb 11 01:15:03 2011 (+0800)
+;; Last-Updated: Wed Feb 23 11:37:18 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 202
+;;     Update #: 203
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1471,7 +1471,15 @@ with the
                                       (and previous-ee
                                            (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
                                            (looking-at-p "[ \t]*$")))
-                              (signal 'rebox-error nil))))))
+                              (throw 'rebox-engine-done t)))
+                          :after-insp-func
+                          (lambda ()
+                            ;; pressing space at boundary - changing style from 520 to 521
+                            ;; moves point to bol, we need to move it back.
+                            (when (and (eq this-command 'rebox-space)
+                                       (bolp))
+                              (rebox-beginning-of-line nil)
+                              (setq marked-point (point)))))))
       ('rebox-error
        (goto-char orig-m)
        (do-auto-fill))
