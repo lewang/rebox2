@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Mar 10 21:07:47 2011 (+0800)
+;; Last-Updated: Thu Mar 10 21:19:36 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 207
+;;     Update #: 209
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1404,14 +1404,16 @@ This function processes prefix arg the same way as`rebox-comment' with the
                                 :previous-style previous-style
                                 :marked-point orig-m
                                 :quiet t))
-              (message "Refilling style: %s" previous-style)
-              (rebox-engine :refill t
-                            :previous-style previous-style
-                            :style previous-style
-                            :marked-point orig-m
-                            :quiet t)))
+              (if (eq previous-style 111)
+                  (signal 'rebox-error nil)
+                (message "Refilling style: %s" previous-style)
+                (rebox-engine :refill t
+                              :previous-style previous-style
+                              :style previous-style
+                              :marked-point orig-m
+                              :quiet t))))
         ('rebox-error
-         (message "rebox returned: %s, calling `fill-paragraph'" err)
+         ;; (message "rebox returned: %s, calling `fill-paragraph'" err)
          (goto-char orig-m)
          (call-interactively 'fill-paragraph))
         ('error
