@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Mar 10 20:53:52 2011 (+0800)
+;; Last-Updated: Thu Mar 10 21:07:47 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 206
+;;     Update #: 207
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2242,16 +2242,18 @@ box STYLE."
         (let (;;;; whatever adaptive filling should take care of this
               (fill-prefix nil)
               ;; In a box, we don't want mode-specific fill functions
-              (fill-paragraph-function nil)
+              (fill-paragraph-function (if (or (not comment-start)
+                                               (equal "" comment-start)
+                                               (memq major-mode rebox-hybrid-major-modes))
+                                           fill-paragraph-function
+                                         nil))
               (fill-column (- fill-column (+ (length ww) (length ee) margin)))
               ;; some filling functions will consult major-mode for filling
               ;; advice, we don't want this since we've removed the
               ;; comment-starts.
               (major-mode 'fundamental-mode)
-              (fill-paragraph-function nil)
               (comment-auto-fill-only-comments nil)
               )
-
           (if (eq refill 'auto-fill)
               (progn
                 (setq count-trailing-spaces marked-point)
