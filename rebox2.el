@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Thu Mar 10 21:19:36 2011 (+0800)
+;; Last-Updated: Fri Mar 11 01:03:05 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 209
+;;     Update #: 211
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -530,6 +530,10 @@ style.")
     auto-fill-function
     normal-auto-fill-function)
   "list of variables overwritten by `rebox-mode' to be saved.")
+
+(defvar rebox-save-env-done nil
+  "prevent rebox from overwriting saved values")
+(make-variable-buffer-local 'rebox-save-env-done)
 
 (defvar rebox-default-unbox-style 11
   "*Preferred style for unboxed comments.")
@@ -2409,12 +2413,14 @@ count trailing spaces or t to always count.
             rebox-newline-indent-function-default)))
 
 (defun rebox-save-env ()
-  "load some settings"
-  (setq rebox-save-env-alist nil)
-  (mapc (lambda (var)
-          (push (cons var (symbol-value var)) rebox-save-env-alist))
-        rebox-save-env-vars)
-  (push (cons 'meta-c-func (lookup-key global-map [(meta c)])) rebox-save-env-alist))
+  "save some settings"
+  (unless rebox-save-env-done
+    (setq rebox-save-env-alist nil)
+    (mapc (lambda (var)
+            (push (cons var (symbol-value var)) rebox-save-env-alist))
+          rebox-save-env-vars)
+    (push (cons 'meta-c-func (lookup-key global-map [(meta c)])) rebox-save-env-alist)
+    (setq rebox-save-env-done t)))
 
 (defun rebox-restore-env ()
   "load some settings"
