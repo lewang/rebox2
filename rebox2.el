@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Wed Feb 23 11:37:18 2011 (+0800)
+;; Last-Updated: Thu Mar 10 20:53:52 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 203
+;;     Update #: 206
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -315,7 +315,7 @@
 
     (16 126
         "?,----"
-        "?| box123456"
+        "?|box123456"
         "?`----")
 
     (17 226
@@ -387,7 +387,7 @@
 
     (126 225
          ",----"
-         "| box123456"
+         "|box123456"
          "`----")
 
     (127 126
@@ -1305,7 +1305,7 @@ prefix arg is processed thusly:
 (defun rebox-dwim-fill (arg)
   "On first invocation, fill region or comment, unless style requested through prefix arg.
 
-If comment is not found, call fill-paragraph.
+If comment is not found, call `fill-paragraph'.
 
 On second consecutive invocation, box region or comment using
 prefix arg specified style or `rebox-default-style'.
@@ -1482,8 +1482,13 @@ with the
                               (setq marked-point (point)))))))
       ('rebox-error
        (goto-char orig-m)
-       (do-auto-fill))
-      ('error
+       ;; prefer `normal-auto-fill-function' to `auto-fill-function'
+       (let ((fill-func (or (cdr (assq 'normal-auto-fill-function rebox-save-env-alist))
+                            (cdr (assq 'auto-fill-function rebox-save-env-alist)))))
+         (if fill-func
+             (funcall fill-func)
+           (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
+       ('error
        (error "rebox-do-auto-fill wrapper: %s" err)))))
 
 ;;;###autoload
