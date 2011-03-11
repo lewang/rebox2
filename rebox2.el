@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Fri Mar 11 01:03:05 2011 (+0800)
+;; Last-Updated: Fri Mar 11 13:50:11 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 211
+;;     Update #: 212
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1695,6 +1695,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
 "
   (let* ((undo-list buffer-undo-list)
+         clean-undo-list
          (marked-point (or marked-point
                            (point-marker)))
          (previous-margin (rebox-left-margin))
@@ -1833,7 +1834,8 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
       ;; Possibly refill, then build the comment box.
       (let ((indent-tabs-mode nil))
-        (rebox-build refill previous-margin style marked-point move-point)))
+        (rebox-build refill previous-margin style marked-point move-point))
+      (setq clean-undo-list t))
 
     ;; Retabify to the left only (adapted from tabify.el).
     (if indent-tabs-mode
@@ -1861,7 +1863,8 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
         (error "%s is not a function" after-insp-func)))
 
     ;; Remove all intermediate boundaries from the undo list.
-    (unless (eq buffer-undo-list undo-list)
+    (unless (or (not clean-undo-list)
+                (eq buffer-undo-list undo-list))
       (let ((cursor buffer-undo-list))
         (while (not (eq (cdr cursor) undo-list))
           (if (car (cdr cursor))
