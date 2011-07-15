@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Fri Mar 11 13:50:11 2011 (+0800)
+;; Last-Updated: Fri Jul 15 08:42:12 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 212
+;;     Update #: 214
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1078,50 +1078,52 @@ If point is not in a box, call `rebox-kill-line-function'.
 With universal ARG, always call `rebox-kill-line-function'.
 "
   (interactive "P*")
-  (let (orig-col orig-line)
-    (rebox-kill-yank-wrapper :before-insp-func
-                             (lambda ()
-                               (goto-char marked-point)
-                               (setq orig-line (if previous-regexp1
-                                                   (1- (line-number-at-pos))
-                                                 (line-number-at-pos)))
-                               (setq orig-col (- (current-column) unindent-count)))
-                             :mod-func
-                             (lambda ()
-                               (goto-char marked-point)
-                               (condition-case err
-                                   (progn
-                                     (if (use-region-p)
-                                         (progn
-                                           (kill-region (region-beginning) (region-end))
-                                           (goto-char (point-max))
-                                           ;; ensure narrowed region is still valid
-                                           (unless (bolp)
-                                             (insert "\n")))
-                                       (call-interactively rebox-kill-line-function)))
-                                 ('end-of-buffer
-                                  (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
-                                                           ,@(cdr err))))))
-                             :after-insp-func
-                             (lambda ()
-                               ;; try to fix the point
-                               (goto-char marked-point)
-                               (let ((new-line-num (if regexp1
-                                                       (1- (line-number-at-pos))
-                                                     (line-number-at-pos)))
-                                     (new-col (- (current-column) previous-margin (length ww))))
-                                 (when (and (< new-line-num 1)
-                                            (>= orig-line 1))
-                                   ;; goto-line
-                                   (goto-char (point-min))
-                                   (forward-line (1- (+ orig-line (if regexp1 1 0)))))
-                                 (when (and (< new-col 0)
-                                            (>= orig-col 0))
-                                   (move-beginning-of-line 1)
-                                   (rebox-beginning-of-line 1))
-                                 (set-marker marked-point (point))))
-                             :orig-func
-                             rebox-kill-line-function)))
+  (if (and arg (listp arg))
+      (funcall rebox-kill-line-function 1)
+    (let (orig-col orig-line)
+      (rebox-kill-yank-wrapper :before-insp-func
+                               (lambda ()
+                                 (goto-char marked-point)
+                                 (setq orig-line (if previous-regexp1
+                                                     (1- (line-number-at-pos))
+                                                   (line-number-at-pos)))
+                                 (setq orig-col (- (current-column) unindent-count)))
+                               :mod-func
+                               (lambda ()
+                                 (goto-char marked-point)
+                                 (condition-case err
+                                     (progn
+                                       (if (use-region-p)
+                                           (progn
+                                             (kill-region (region-beginning) (region-end))
+                                             (goto-char (point-max))
+                                             ;; ensure narrowed region is still valid
+                                             (unless (bolp)
+                                               (insert "\n")))
+                                         (call-interactively rebox-kill-line-function)))
+                                   ('end-of-buffer
+                                    (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
+                                                             ,@(cdr err))))))
+                               :after-insp-func
+                               (lambda ()
+                                 ;; try to fix the point
+                                 (goto-char marked-point)
+                                 (let ((new-line-num (if regexp1
+                                                         (1- (line-number-at-pos))
+                                                       (line-number-at-pos)))
+                                       (new-col (- (current-column) previous-margin (length ww))))
+                                   (when (and (< new-line-num 1)
+                                              (>= orig-line 1))
+                                     ;; goto-line
+                                     (goto-char (point-min))
+                                     (forward-line (1- (+ orig-line (if regexp1 1 0)))))
+                                   (when (and (< new-col 0)
+                                              (>= orig-col 0))
+                                     (move-beginning-of-line 1)
+                                     (rebox-beginning-of-line 1))
+                                   (set-marker marked-point (point))))
+                               :orig-func
+                               rebox-kill-line-function))))
 
 (defun rebox-yank (arg)
   "If point is in a box, unbox first, and then run `rebox-yank-function' as requested.
