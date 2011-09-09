@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Fri Jul 15 08:42:12 2011 (+0800)
+;; Last-Updated: Fri Sep  9 14:52:02 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 214
+;;     Update #: 215
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -700,7 +700,7 @@ You don't need to enable the minor mode to use rebox2
      'error-conditions
      '(error rebox-error))
 
-(put 'rebox-comment-not-found-error
+(put 'rebox-error
      'error-message
      "rebox error")
 
