@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Sep 13 00:07:48 2011 (+0800)
+;; Last-Updated: Tue Sep 13 00:15:24 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 217
+;;     Update #: 218
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -673,10 +673,6 @@ You don't need to enable the minor mode to use rebox2
         (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill))
     (rebox-restore-env)))
 
-
-(define-global-minor-mode rebox-global-mode rebox-mode
-    rebox-mode
-  :group 'rebox)
 
 ;; functions passed to rebox-engine inspect these variables
 (eval-when-compile
