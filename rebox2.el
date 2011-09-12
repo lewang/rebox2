@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Sep 13 00:15:24 2011 (+0800)
+;; Last-Updated: Tue Sep 13 00:42:27 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 218
+;;     Update #: 219
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1091,7 +1091,8 @@ With universal ARG, always call `rebox-kill-line-function'.
                                  (goto-char marked-point)
                                  (condition-case err
                                      (progn
-                                       (if (use-region-p)
+                                       (if (and (use-region-p)
+                                                delete-selection-mode)
                                            (progn
                                              (kill-region (region-beginning) (region-end))
                                              (goto-char (point-max))
