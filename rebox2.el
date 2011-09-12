@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Mon Sep 12 17:00:23 2011 (+0800)
+;; Last-Updated: Tue Sep 13 00:07:48 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 216
+;;     Update #: 217
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -662,6 +662,7 @@ You don't need to enable the minor mode to use rebox2
   :group 'rebox
   (if rebox-mode
       (progn
+        (auto-fill-mode 1)
         (rebox-save-env)
         (set (make-local-variable 'comment-auto-fill-only-comments)
              (if (and (stringp comment-start)
@@ -669,8 +670,7 @@ You don't need to enable the minor mode to use rebox2
                       (not (memq major-mode rebox-hybrid-major-modes)))
                  t
                nil))
-        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill)
-        (auto-fill-mode 1))
+        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill))
     (rebox-restore-env)))
 
 
