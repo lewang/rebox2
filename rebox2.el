@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Fri Sep  9 14:52:02 2011 (+0800)
+;; Last-Updated: Mon Sep 12 17:00:23 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 215
+;;     Update #: 216
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -521,9 +521,14 @@
 style.")
 (make-variable-buffer-local 'rebox-default-style)
 
+(defvar rebox-default-unbox-style 11
+  "*Preferred style for unboxed comments.")
+(make-variable-buffer-local 'rebox-default-unbox-style)
+
 (defvar rebox-save-env-alist nil
   "backup value saved for here for mode deactivation")
 (make-variable-buffer-local 'rebox-save-env-alist)
+(put 'rebox-save-env-alist 'permanent-local t)
 
 (defvar rebox-save-env-vars
   '(comment-auto-fill-only-comments
@@ -534,10 +539,7 @@ style.")
 (defvar rebox-save-env-done nil
   "prevent rebox from overwriting saved values")
 (make-variable-buffer-local 'rebox-save-env-done)
-
-(defvar rebox-default-unbox-style 11
-  "*Preferred style for unboxed comments.")
-(make-variable-buffer-local 'rebox-default-unbox-style)
+(put 'rebox-save-env-done 'permanent-local t)
 
 (defgroup rebox nil
   "rebox."
