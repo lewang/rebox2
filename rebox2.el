@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Sep 13 19:26:49 2011 (+0800)
+;; Last-Updated: Wed Sep 14 01:28:18 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 221
+;;     Update #: 222
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1587,8 +1587,9 @@ and indent.
         previous-style)
     (condition-case err
         (progn
-          (when (and current-prefix-arg
-                     (listp current-prefix-arg))
+          (when (or (and current-prefix-arg
+                         (listp current-prefix-arg))
+                    buffer-read-only)
             ;; call orig-func
             (signal 'rebox-error nil))
           (save-restriction
