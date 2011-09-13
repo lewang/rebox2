@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Tue Sep 13 00:42:27 2011 (+0800)
+;; Last-Updated: Tue Sep 13 19:26:49 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 219
+;;     Update #: 221
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -524,6 +524,10 @@ style.")
 (defvar rebox-default-unbox-style 11
   "*Preferred style for unboxed comments.")
 (make-variable-buffer-local 'rebox-default-unbox-style)
+
+(defvar rebox-cached-style nil
+  "cached style used during yanking, to ensure yank-pop doesn't pick up a different style based on the yanked text")
+(make-variable-buffer-local 'rebox-cached-style)
 
 (defvar rebox-save-env-alist nil
   "backup value saved for here for mode deactivation")
@@ -1588,6 +1592,9 @@ and indent.
             ;; call orig-func
             (signal 'rebox-error nil))
           (save-restriction
+            (when (and (eq last-command 'yank)
+                       (not rebox-cached-style))
+              (signal 'rebox-error nil))
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments
                                    :try-whole-box try-whole-box)
             (when (and (= orig-m (point-min))
@@ -1600,6 +1607,9 @@ and indent.
             (setq previous-style (rebox-guess-style))
             (if (eq previous-style 111)
                 (signal 'rebox-error '("style is 111"))
+              (if (eq last-command 'yank)
+                  (assert (eq rebox-cached-style previous-style))
+                (setq rebox-cached-style previous-style))
               (rebox-engine :style previous-style
                             :marked-point orig-m
                             :quiet t
@@ -1613,6 +1623,7 @@ and indent.
                             :after-insp-func
                             after-insp-func))))
       ('rebox-error
+       (setq rebox-cached-style nil)
        (goto-char orig-m)
        (and orig-func
             (call-interactively orig-func)))
