@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Wed Sep 14 01:28:18 2011 (+0800)
+;; Last-Updated: Wed Sep 14 14:46:36 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 222
+;;     Update #: 223
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1326,7 +1326,7 @@ This function processes prefix arg the same way as`rebox-comment' with the
 
             +----------------------------------------------------+
             | specifying `-' will unbox the region or comment to |
-            | `rebox-default-unbox-style' with refill           |
+            | `rebox-default-unbox-style' with refill            |
             +----------------------------------------------------+
 "
   (interactive "*P")
