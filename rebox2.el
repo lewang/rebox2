@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Wed Sep 14 14:46:36 2011 (+0800)
+;; Last-Updated: Fri Sep 16 18:42:48 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 223
+;;     Update #: 224
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -674,8 +674,22 @@ You don't need to enable the minor mode to use rebox2
                       (not (memq major-mode rebox-hybrid-major-modes)))
                  t
                nil))
-        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill))
-    (rebox-restore-env)))
+        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill)
+        (when (featurep 'yasnippet)
+          (unless (memq 'turn-off-rebox yas/before-expand-snippet-hook)
+            (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t))
+          (unless (memq 'turn-on-rebox yas/after-exit-snippet-hook)
+            (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))))
+    (rebox-restore-env)
+    (when (called-interactively-p 'any)
+      (remove-hook 'yas/before-expand-snippet-hook 'turn-off-rebox t)
+      (remove-hook 'yas/after-exit-snippet-hook 'turn-on-rebox t))))
+
+(defun turn-on-rebox ()
+  (rebox-mode 1))
+
+(defun turn-off-rebox ()
+  (rebox-mode 0))
 
 
 ;; functions passed to rebox-engine inspect these variables
