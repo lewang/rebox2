@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Fri Sep 16 18:42:48 2011 (+0800)
+;; Last-Updated: Sat Sep 17 03:02:05 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 224
+;;     Update #: 225
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1834,7 +1834,9 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
       (unless (zerop unindent-count)
         (goto-char (point-min))
         (while (not (eobp))
-          (backward-delete-char (skip-chars-forward " " (+ (point) unindent-count)))
+          (delete-region (point) (progn
+                                   (skip-chars-forward " " (+ (point) unindent-count))
+                                   (point)))
           (forward-line 1)))
 
       ;; modify the box
