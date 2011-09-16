@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sat Sep 17 03:02:05 2011 (+0800)
+;; Last-Updated: Sat Sep 17 03:07:55 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 225
+;;     Update #: 227
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -699,6 +699,7 @@ You don't need to enable the minor mode to use rebox2
   (defvar previous-sw)
   (defvar previous-ss)
   (defvar previous-se)
+  (defvar previous-regexp3)
   (defvar previous-margin)
   (defvar previous-ee)
   (defvar previous-nw)
@@ -2174,7 +2175,7 @@ the empty regexp."
       (let ((start (- (point) (length ne))))
         (when (and (>= start (point-min))
                    (string-equal ne (buffer-substring start (point))))
-          (delete-backward-char (length ne)))))
+          (delete-region (point) (- (point) (length ne))))))
     (beginning-of-line)
     (when (and nw-regexp (search-forward-regexp nw-regexp (point-at-eol)))
         (replace-match (make-string (- (match-end 0) (match-beginning 0))
@@ -2208,7 +2209,7 @@ the empty regexp."
       (let ((start (- (point) (length se))))
         (when (and (>= start (point-min))
                    (string-equal se (buffer-substring start (point))))
-          (delete-backward-char (length se)))))
+          (delete-region (point) (- (point) (length se))))))
     (forward-line 0)
     (when (and sw-regexp (search-forward-regexp sw-regexp (point-at-eol)))
         (replace-match (make-string (- (match-end 0) (match-beginning 0))
@@ -2236,7 +2237,7 @@ the empty regexp."
         (let ((start (- (point) (length ee))))
           (when (and (>= start (point-min))
                      (string-equal ee (buffer-substring start (point))))
-            (delete-backward-char (length ee)))))
+            (delete-region (point) (- (point) (length ee))))))
       (beginning-of-line)
       (when (and ww-regexp (search-forward-regexp ww-regexp (point-at-eol)))
           (replace-match (make-string (- (match-end 0) (match-beginning 0))
