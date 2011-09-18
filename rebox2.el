@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Sat Sep 17 03:07:55 2011 (+0800)
+;; Last-Updated: Mon Sep 19 02:33:03 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 227
+;;     Update #: 228
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1181,6 +1181,7 @@ With universal ARG, always call `reobx-yank-pop-function'.
   (interactive "P")
   (let ((mod-p (buffer-modified-p)))
     (rebox-kill-yank-wrapper :try-whole-box t
+                             :not-past-se t
                              :mod-func
                              (lambda ()
                                (goto-char orig-m)
@@ -1597,7 +1598,7 @@ and indent.
 
 
 
-(defun* rebox-kill-yank-wrapper (&key try-whole-box not-at-nw mod-func orig-func before-insp-func after-insp-func)
+(defun* rebox-kill-yank-wrapper (&key try-whole-box not-at-nw not-past-se mod-func orig-func before-insp-func after-insp-func)
   (let ((orig-m (point-marker))
         previous-style)
     (condition-case err
@@ -1615,6 +1616,12 @@ and indent.
                                    :try-whole-box try-whole-box)
             (when (and (= orig-m (point-min))
                        not-at-nw)
+              (signal 'rebox-error '("mark is out of box")))
+            (when (and (= orig-m (point-max))
+                       (progn
+                         (goto-char orig-m)
+                         (bolp))
+                       not-past-se)
               (signal 'rebox-error '("mark is out of box")))
             (when (and (use-region-p)
                        (or (< (mark) (point-min))
