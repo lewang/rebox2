@@ -666,7 +666,6 @@ You don't need to enable the minor mode to use rebox2
   :group 'rebox
   (if rebox-mode
       (progn
-        (auto-fill-mode 1)
         (rebox-save-env)
         (set (make-local-variable 'comment-auto-fill-only-comments)
              (if (and (stringp comment-start)
@@ -675,6 +674,7 @@ You don't need to enable the minor mode to use rebox2
                  t
                nil))
         (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill)
+        (auto-fill-mode 1)
         (when (featurep 'yasnippet)
           (unless (memq 'turn-off-rebox yas/before-expand-snippet-hook)
             (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t))
