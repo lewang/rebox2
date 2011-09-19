@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Mon Sep 19 14:13:24 2011 (+0800)
+;; Last-Updated: Mon Sep 19 17:08:54 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 230
+;;     Update #: 231
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1182,7 +1182,10 @@ With universal ARG, always call `reobx-yank-pop-function'.
   (interactive "P")
   (let ((mod-p (buffer-modified-p)))
     (rebox-kill-yank-wrapper :try-whole-box t
-                             :not-past-se t
+                             ;; `not-past-se' refers to bol just after box
+                             :not-past-se (if (use-region-p)
+                                              nil
+                                            t)
                              :mod-func
                              (lambda ()
                                (goto-char orig-m)
