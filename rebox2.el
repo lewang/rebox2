@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.2
-;; Last-Updated: Mon Sep 19 02:33:03 2011 (+0800)
+;; Last-Updated: Mon Sep 19 14:13:24 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 228
+;;     Update #: 230
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -666,7 +666,6 @@ You don't need to enable the minor mode to use rebox2
   :group 'rebox
   (if rebox-mode
       (progn
-        (auto-fill-mode 1)
         (rebox-save-env)
         (set (make-local-variable 'comment-auto-fill-only-comments)
              (if (and (stringp comment-start)
@@ -674,7 +673,9 @@ You don't need to enable the minor mode to use rebox2
                       (not (memq major-mode rebox-hybrid-major-modes)))
                  t
                nil))
-        (set (make-local-variable 'normal-auto-fill-function) 'rebox-do-auto-fill)
+        (make-local-variable 'normal-auto-fill-function)
+        (setq normal-auto-fill-function 'rebox-do-auto-fill)
+        (auto-fill-mode 1)
         (when (featurep 'yasnippet)
           (unless (memq 'turn-off-rebox yas/before-expand-snippet-hook)
             (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t))
@@ -1509,14 +1510,17 @@ with the
                               (setq marked-point (point)))))))
       ('rebox-error
        (goto-char orig-m)
-       ;; prefer `normal-auto-fill-function' to `auto-fill-function'
-       (let ((fill-func (or (cdr (assq 'normal-auto-fill-function rebox-save-env-alist))
-                            (cdr (assq 'auto-fill-function rebox-save-env-alist)))))
-         (if fill-func
-             (funcall fill-func)
-           (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
+       (rebox-call-original-auto-fill-function))
        ('error
        (error "rebox-do-auto-fill wrapper: %s" err)))))
+
+
+(defun rebox-call-original-auto-fill-function ()
+  ;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
+  (let ((fill-func (cdr (assq 'normal-auto-fill-function rebox-save-env-alist))))
+    (if fill-func
+        (funcall fill-func)
+      (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
 
 ;;;###autoload
 (defun rebox-indent-new-line (arg)
@@ -2298,13 +2302,12 @@ box STYLE."
               ;; advice, we don't want this since we've removed the
               ;; comment-starts.
               (major-mode 'fundamental-mode)
-              (comment-auto-fill-only-comments nil)
-              )
+              (comment-auto-fill-only-comments nil))
           (if (eq refill 'auto-fill)
               (progn
                 (setq count-trailing-spaces marked-point)
                 (goto-char marked-point)
-                (do-auto-fill))
+                (rebox-call-original-auto-fill-function))
             (setq count-trailing-spaces nil)
             (fill-region (point-min) limit-m)))
       (setq count-trailing-spaces marked-point))
