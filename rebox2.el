@@ -11,10 +11,10 @@
 ;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
-;; Version: 0.3
-;; Last-Updated: Tue Sep 20 17:30:52 2011 (+0800)
+;; Version: 0.4
+;; Last-Updated: Tue Sep 20 21:21:43 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 237
+;;     Update #: 241
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -76,6 +76,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;;
+;; 0.4
+;;
+;; * add `rebox-min-fill-column' option fo minimum box size
+;;
+;; before that
 ;;
 ;; * better error handling
 ;; * fixed a few boxing and unboxing corner cases where boxes were malformed
@@ -554,6 +560,12 @@ lines in the body of box."
   :type 'boolean
   :group 'rebox)
 
+(defcustom rebox-min-fill-column nil
+  "The minimum fill-column to use when filling boxes.
+Boxes that start at column0 will be at least this many columns wide.
+
+nil means boxes resize according to text.")
+
 (defcustom rebox-mode-line-string " rebox"
   ""
   :type 'string
@@ -647,7 +659,7 @@ You don't need to enable the minor mode to use rebox2
 "
   :init-value nil
   :lighter rebox-mode-line-string
-  :version "0.3"
+  :version "0.4"
   :keymap '(([(shift return)] . rebox-indent-new-line)
             ([(meta q)] . rebox-dwim-fill)
             ([(meta Q)] . rebox-dwim-no-fill)
@@ -1878,7 +1890,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
                   ;; in case editing functions check major-mode for
                   ;; indentation, etc.
                   (major-mode 'fundamental-mode)
-                  (fill-column (- fill-column (+ (length ww) (length ee) previous-margin))))
+                  (fill-column (rebox-get-fill-column ww ee previous-margin)))
               (funcall mod-func))
           (error "%s is not a function" mod-func)))
 
@@ -2317,7 +2329,7 @@ box STYLE."
                                                (memq major-mode rebox-hybrid-major-modes))
                                            fill-paragraph-function
                                          nil))
-              (fill-column (- fill-column (+ (length ww) (length ee) margin)))
+              (fill-column (rebox-get-fill-column ww ee margin))
               ;; some filling functions will consult major-mode for filling
               ;; advice, we don't want this since we've removed the
               ;; comment-starts.
@@ -2335,7 +2347,11 @@ box STYLE."
                                (length ww)
                                margin)
                             ;; minimum box width is 1
-                            (1+ (length ww))))
+                            (1+ (length ww))
+                            (if (and rebox-min-fill-column
+                                     (numberp rebox-min-fill-column))
+                                (- rebox-min-fill-column (length ee))
+                              0)))
     ;; Construct the top line.
     (goto-char (point-min))
     (cond (merge-nw
@@ -2474,6 +2490,16 @@ count trailing spaces or t to always count.
         (or rebox-newline-indent-function
             (cdr (assq major-mode rebox-newline-indent-function-alist))
             rebox-newline-indent-function-default)))
+
+(defun rebox-get-fill-column (ww ee margin)
+  (- (max fill-column
+          (if (and rebox-min-fill-column
+                   (numberp rebox-min-fill-column))
+              rebox-min-fill-column
+            0))
+     (length ww)
+     (length ee)
+     margin))
 
 (defun rebox-save-env ()
   "save some settings"
