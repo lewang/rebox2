@@ -11,10 +11,10 @@
 ;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
-;; Version: 0.2
-;; Last-Updated: Mon Sep 19 17:08:54 2011 (+0800)
+;; Version: 0.3
+;; Last-Updated: Tue Sep 20 14:21:37 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 231
+;;     Update #: 235
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -649,6 +649,7 @@ You don't need to enable the minor mode to use rebox2
 "
   :init-value nil
   :lighter rebox-mode-line-string
+  :version "0.3"
   :keymap '(([(shift return)] . rebox-indent-new-line)
             ([(meta q)] . rebox-dwim-fill)
             ([(meta Q)] . rebox-dwim-no-fill)
@@ -1473,6 +1474,24 @@ with the
       (rebox-comment :style style
                      :refill nil))))
 
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;;; auto-fill strategy                                                   ;;;
+  ;;;                                                                      ;;;
+  ;;; 1. make `normal-auto-fill-function' `rebox-do-auto-fill'             ;;;
+  ;;;                                                                      ;;;
+  ;;; 2. activate auto-fill-mode, setting `auto-fill-function' to          ;;;
+  ;;;    `rebox-do-auto-fill'                                              ;;;
+  ;;;                                                                      ;;;
+  ;;; 3. when auto-fillling, if we are in a box, we call the default value ;;;
+  ;;;    of `normal-auto-fill-function', since we've stripped off the      ;;;
+  ;;;    comments and any major specific auto-fill functions will be       ;;;
+  ;;;    confused.                                                         ;;;
+  ;;;                                                                      ;;;
+  ;;;    If we are not in a box, we call our saved value of                ;;;
+  ;;;    `normal-auto-fill-function'                                       ;;;
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 (defun rebox-do-auto-fill ()
   "Try to fill as box first, if that fails use `do-auto-fill'
 "
@@ -1513,14 +1532,16 @@ with the
                               (setq marked-point (point)))))))
       ('rebox-error
        (goto-char orig-m)
-       (rebox-call-original-auto-fill-function))
+       (rebox-call-alternate-fill-function))
        ('error
        (error "rebox-do-auto-fill wrapper: %s" err)))))
 
 
-(defun rebox-call-original-auto-fill-function ()
+(defun rebox-call-alternate-fill-function (&optional fundamental)
   ;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
-  (let ((fill-func (cdr (assq 'normal-auto-fill-function rebox-save-env-alist))))
+  (let ((fill-func (if fundamental
+                       (default-value 'normal-auto-fill-function)
+                     (cdr (assq 'normal-auto-fill-function rebox-save-env-alist)))))
     (if fill-func
         (funcall fill-func)
       (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
@@ -2310,7 +2331,7 @@ box STYLE."
               (progn
                 (setq count-trailing-spaces marked-point)
                 (goto-char marked-point)
-                (rebox-call-original-auto-fill-function))
+                (rebox-call-alternate-fill-function 'fundamental))
             (setq count-trailing-spaces nil)
             (fill-region (point-min) limit-m)))
       (setq count-trailing-spaces marked-point))
