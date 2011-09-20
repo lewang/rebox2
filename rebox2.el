@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.3
-;; Last-Updated: Tue Sep 20 14:21:37 2011 (+0800)
+;; Last-Updated: Tue Sep 20 17:30:52 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 235
+;;     Update #: 237
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -72,8 +72,6 @@
 ;;   rebuild boxes all the time.
 ;; * style selection can use some kind of menu completion where all styles are
 ;;   presented and the user navigates
-;; * space on the ww border moves whole box right, backspace moves box left
-;;
 ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -678,10 +676,8 @@ You don't need to enable the minor mode to use rebox2
         (setq normal-auto-fill-function 'rebox-do-auto-fill)
         (auto-fill-mode 1)
         (when (featurep 'yasnippet)
-          (unless (memq 'turn-off-rebox yas/before-expand-snippet-hook)
-            (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t))
-          (unless (memq 'turn-on-rebox yas/after-exit-snippet-hook)
-            (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))))
+          (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t)
+          (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t)))
     (rebox-restore-env)
     (when (called-interactively-p 'any)
       (remove-hook 'yas/before-expand-snippet-hook 'turn-off-rebox t)
