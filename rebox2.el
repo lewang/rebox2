@@ -11,10 +11,10 @@
 ;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
-;; Version: 0.4
-;; Last-Updated: Tue Sep 20 21:21:43 2011 (+0800)
+;; Version: 0.5
+;; Last-Updated: Wed Sep 21 17:03:19 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 241
+;;     Update #: 272
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -27,6 +27,24 @@
                      ;; Hi, I'm a box. My style is 525 ;;
                      ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;; Features first:
+;;
+;; ** minor-mode features
+;;
+;;    - auto-fill boxes (install filladapt for optimal filling)
+;;    - motion (beginning-of-line, end-of-line) within box
+;;    - S-return rebox-newline
+;;    - kill/yank (within box) only text, not box borders
+;;    - move box by using space, backspace / center with M-c
+;;      - point has to be to the left of the border
+;;
+;; ** interesting variables for customization
+;;
+;;    - `rebox-style-loop'
+;;    - `rebox-min-fill-column'
+;;    -
+
+
 ;;; Installation:
 ;;
 ;; 1. Add rebox2.el to a directory in your load-path.
@@ -34,29 +52,18 @@
 ;; 2. Basic install - add to your ".emacs":
 ;;
 ;;     (require 'rebox2)
-;;     (global-set-key [(meta q)] 'rebox-dwim-fill)
-;;     (global-set-key [(shift meta q)] 'rebox-dwim-no-fill)
+;;     (global-set-key [(meta q)] 'rebox-dwim)
+;;     (global-set-key [(shift meta q)] 'rebox-cycle)
 ;;
 ;; 3. Full install - use `rebox-mode' in major-mode hooks:
 ;;
 ;;     ;; setup rebox for emacs-lisp
 ;;     (add-hook 'emacs-lisp-mode-hook (lambda ()
-;;                                       (setq rebox-default-style 525)
-;;                                       (setq rebox-no-box-comment-style 521)
+;;                                       (setq (make-local-variable 'rebox-style-loop) '(525 517 521))
 ;;                                       (rebox-mode 1)))
 ;;
-;;    Default boxing styles should work for most programming modes, however,
+;;    Default `rebox-style-loop' should work for most programming modes, however,
 ;;    you may want to set the style you prefer for each major-mode like above
-;;
-;; ** minor-mode features
-;;
-;;   - auto-fill boxes
-;;   - hype filladapt
-;;   - motion (beginning-of-line, end-of-line) within box
-;;   - S-return rebox-newline
-;;   - kill/yank (within box) only text, not box borders
-;;   - move box by using space, backspace / center with M-c
-;;     - point has to be to the left of the border
 ;;
 ;;
 
@@ -67,6 +74,7 @@
 
 ;;; Future improvement ideas:
 ;;
+;; * remove reliance on dynamic binding using `destructuring-bind' or a hash
 ;; * allow mixed borders "-=-=-=-=-=-"
 ;; * optimize functions that modify the box contents so they don't unbuild and
 ;;   rebuild boxes all the time.
@@ -76,6 +84,48 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;;
+;; 0.5
+;;
+;; * major breaking change
+;;
+;; * entry-functions completely rethought and simplified
+;;
+;;   removed:
+;;    * `rebox-region'
+;;    * `rebox-comment'
+;;    * `rebox-dwim-fill'
+;;    * `rebox-dwim-no-fill'
+;;   added:
+;;    * `rebox-dwim'
+;;    * `rebox-fill'
+;;    * `rebox-cycle'
+;;
+;; * boxing styling system rethought and simplified
+;;
+;;   removed:
+;;    * `rebox-default-style'
+;;    * `rebox-no-box-comment-style'
+;;   added:
+;;    * `rebox-style-loop'
+;;
+;; * new system description
+;;
+;;   I coded the previous entry system when I was new to Emacs lisp years and
+;;   years ago.  The new system is much more intuitive.
+;;
+;;   Call `rebox-dwim' to refill current box or region and cycle with refill.
+;;
+;;   Call `rebox-cycle' to cycle style without refilling.
+;;
+;;   Instead of describing the boxed style and comment style as different
+;;   variables, you describe the loop you want rebox to follow with
+;;   `rebox-style-loop'.  If rebox detects that the current box style is not
+;;   in the loop, it uses the first style.
+;;
+;;   `rebox-style-loop' is not made to be always buffer-local, and you can
+;;   customize it using the custom facilities.  Optionally, you can make a
+;;   buffer-local version of it in a major-mode hook yourself.
 ;;
 ;; 0.4
 ;;
@@ -518,17 +568,6 @@
 
     ))
 
-
-(defvar rebox-default-style 15
-  "*Preferred style for box comments.  The buffer's
-`comment-start' is used with this style to arrive at the box
-style.")
-(make-variable-buffer-local 'rebox-default-style)
-
-(defvar rebox-default-unbox-style 11
-  "*Preferred style for unboxed comments.")
-(make-variable-buffer-local 'rebox-default-unbox-style)
-
 (defvar rebox-cached-style nil
   "cached style used during yanking, to ensure yank-pop doesn't pick up a different style based on the yanked text")
 (make-variable-buffer-local 'rebox-cached-style)
@@ -553,6 +592,23 @@ style.")
   "rebox."
   :group 'convenience)
 
+(defcustom rebox-style-loop '(15 35 33 11)
+  "list of styles for cycling by `rebox-cycle'
+
+It may be tempting to include the no-box style -- 111 in this
+list, but if you do, cycling through styles without an
+active-region will break because rebox can't figure out a region
+to act on.
+
+It's preferrable to have a boxing style that's undo-able by your
+major-mode's comment handling, like 11 or 21.  That way, when you
+need to remove comment marks, you can cycle to such a style and
+use `uncomment-region'.
+
+"
+  :type '(repeat number)
+  :group 'rebox)
+
 (defcustom rebox-keep-blank-lines t
   "Non-nil gives rebox permission to truncate blank lines at
 beginning of box, end, and more than three consecutive blank
@@ -572,7 +628,7 @@ nil means boxes resize according to text.")
   :group 'rebox)
 
 (defcustom rebox-newline-indent-function-default 'comment-indent-new-line
-  "function called by `rebox-indent-new-line' when doesn't see a box."
+  "function called by `rebox-indent-new-line' no box is found."
   :group 'rebox)
 
 (defvar rebox-newline-indent-function nil
@@ -646,7 +702,7 @@ boxing should recognize paragraphs as well as comment blocks.
 (define-minor-mode rebox-mode
   "Toggle rebox mode for managing text and comment boxes.
 
-1. Auto-filling is enabled, and comment boxes are auto-filled.  asd f asd f
+1. Auto-filling is enabled, and comment boxes are auto-filled.
 
 
 
@@ -654,15 +710,16 @@ With no argument, this command toggles the mode.
   Non-null prefix argument turns on the mode.
   Null prefix argument turns off the mode.
 
-You don't need to enable the minor mode to use rebox2
+You don't need to enable the minor mode to use rebox2, see rebox2
+header.
 
 "
   :init-value nil
   :lighter rebox-mode-line-string
-  :version "0.4"
+  :version "0.5"
   :keymap '(([(shift return)] . rebox-indent-new-line)
-            ([(meta q)] . rebox-dwim-fill)
-            ([(meta Q)] . rebox-dwim-no-fill)
+            ([(meta q)] . rebox-dwim)
+            ([(meta Q)] . rebox-cycle)
             ([(control a)] . rebox-beginning-of-line)
             ([(control e)] . rebox-end-of-line)
             ([(control k)] . rebox-kill-line)
@@ -770,29 +827,7 @@ You don't need to enable the minor mode to use rebox2
    "^[ \t]*%+"                          ; 6
    ])
 
-;;; Request the style interactively, using the minibuffer.
 
-(defun rebox-ask-for-style ()
-  (let (key language quality type)
-    (while (not language)
-      (message "\
-Box language is 100-none, 200-/*, 300-//, 400-#, 500-;, 600-%%")
-      (setq key (read-char))
-      (when (and (>= key ?0) (<= key ?6))
-        (setq language (- key ?0))))
-    (while (not quality)
-      (message "\
-Box quality/width is 10-simple/1, 20-rounded/2, 30-starred/3 or 40-starred/4")
-      (setq key (read-char))
-      (when (and (>= key ?0) (<= key ?4))
-        (setq quality (- key ?0))))
-    (while (not type)
-      (message "\
-Box type is 1-opened, 2-half-single, 3-single, 4-half-double or 5-double")
-      (setq key (read-char))
-      (when (and (>= key ?0) (<= key ?5))
-        (setq type (- key ?0))))
-    (+ (* 100 language) (* 10 quality) type)))
 
 ;; Template ingestion.
 
@@ -924,40 +959,45 @@ refilled with it."
                                      nw nn ne ww ee sw ss se))
                        rebox-style-data))))))
 
-(defun* rebox-get-style-from-prefix-arg (arg &key (ask t) (use-default t))
-  "analyze `arg' to get style"
-  (cond ((numberp arg)
-         (if (> arg 0)
-             (rebox-get-style-for-major-mode arg)
-           (rebox-get-style-for-major-mode (- arg))))
-        ((eq '- arg)
-         (if ask
-             (rebox-ask-for-style)
-           (rebox-get-style-for-major-mode rebox-default-unbox-style)))
-        (t
-         (when use-default
-           (rebox-get-style-for-major-mode rebox-default-style)))))
-
-(defun rebox-get-refill-from-prefix-arg (arg)
-  "analyze `arg' to refill
-
-returns t for refil nil for not.
-"
-  (if (and arg
-           (listp arg))
-      nil
-    t))
-
-(defun rebox-get-style-for-major-mode (style)
+(defun rebox-get-canonical-style (style &optional c-start)
+  "return 3 digit style based on 2 digit style and a comment-start type string"
+  (setq c-start (or (and c-start
+                         (stringp c-start)
+                         c-start)
+                    comment-start))
   (cond ((and (numberp style)
               (< style 100)
               (> style 0))
-         (+ (* 100 (rebox-guess-language comment-start))
+         (+ (* 100 (rebox-guess-language c-start))
             style))
         ((numberp style)
          style)
         (t
          (error "unknown style: %s" style))))
+
+(defun rebox-loop-get-style (can-style movement &optional style-loop)
+  "get the next style in style-loop based on movement.
+
+If style isn't found return first style."
+  (setq style-loop (or style-loop
+                       rebox-style-loop))
+  (let ((index 0)
+        found
+        new-index)
+    (while (and (not found)
+                (< index (length style-loop)))
+      (if (eq (rebox-get-canonical-style (nth index style-loop))
+              can-style)
+          (setq found t)
+        (incf index)))
+    (setq new-index (+ movement index))
+    (setq new-index (if (or (not found)
+                            (eq index (1- (length style-loop))))
+                        0
+                      (if (< new-index 0)
+                          (1- (length style-loop))
+                        new-index)))
+    (rebox-get-canonical-style (nth new-index style-loop))))
 
 (defun rebox-make-fill-prefix ()
   "generate fill prefix using adaptive filling methods"
@@ -968,6 +1008,79 @@ returns t for refil nil for not.
     (fill-context-prefix
      (point-at-bol)
      (point-at-eol))))
+
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;;; auto-fill strategy                                                   ;;;
+ ;;;                                                                      ;;;
+ ;;; 1. make `normal-auto-fill-function' `rebox-do-auto-fill'             ;;;
+ ;;;                                                                      ;;;
+ ;;; 2. activate auto-fill-mode, setting `auto-fill-function' to          ;;;
+ ;;;    `rebox-do-auto-fill'                                              ;;;
+ ;;;                                                                      ;;;
+ ;;; 3. when auto-fillling, if we are in a box, we call the default value ;;;
+ ;;;    of `normal-auto-fill-function', since we've stripped off the      ;;;
+ ;;;    comments and any major specific auto-fill functions will be       ;;;
+ ;;;    confused.                                                         ;;;
+ ;;;                                                                      ;;;
+ ;;;    If we are not in a box, we call our saved value of                ;;;
+ ;;;    `normal-auto-fill-function'                                       ;;;
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defun rebox-do-auto-fill ()
+  "Try to fill as box first, if that fails use `do-auto-fill'
+"
+  (let ((orig-m (point-marker))
+        style)
+    (condition-case err
+        (save-restriction
+          (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+          (setq style (rebox-guess-style))
+          (if (= style 111)
+              (signal 'rebox-error nil)
+            (goto-char orig-m)
+            (rebox-engine :previous-style style
+                          :marked-point orig-m
+                          :refill 'auto-fill
+                          :quiet t
+                          :move-point nil
+                          :before-insp-func
+                          (lambda ()
+                            (goto-char marked-point)
+                            ;; top or bottom or left or right border
+                            (when (or (and previous-regexp1
+                                           (eq (line-number-at-pos) 1))
+                                      (and previous-regexp3
+                                           (eq (line-number-at-pos) (1- (line-number-at-pos (point-max)))))
+                                      (< (current-column) unindent-count)
+                                      (and previous-ee
+                                           (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
+                                           (looking-at-p "[ \t]*$")))
+                              (throw 'rebox-engine-done t)))
+                          :after-insp-func
+                          (lambda ()
+                            ;; pressing space at boundary - changing style from 520 to 521
+                            ;; moves point to bol, we need to move it back.
+                            (when (and (eq this-command 'rebox-space)
+                                       (bolp))
+                              (rebox-beginning-of-line nil)
+                              (setq marked-point (point)))))))
+      ('rebox-error
+       (goto-char orig-m)
+       (rebox-call-alternate-fill-function))
+      ('error
+       (error "rebox-do-auto-fill wrapper: %s" err)))))
+
+
+(defun rebox-call-alternate-fill-function (&optional fundamental)
+  ;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
+  (let ((fill-func (if fundamental
+                       (default-value 'normal-auto-fill-function)
+                     (cdr (assq 'normal-auto-fill-function rebox-save-env-alist)))))
+    (if fill-func
+        (funcall fill-func)
+      (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
 
 
 ;; User interaction.
@@ -1269,292 +1382,6 @@ with argument N, move n columns."
                                rebox-backspace-function)))
 
 ;;;###autoload
-(defun* rebox-region (r-beg r-end &key style (refill t) previous-style (quiet nil))
-  "Rebox the region.
-
-Prefix arg is processed same as `rebox-comment'
-
-Create newling before and after region as needed to ensure box
-starts and ends on a newline.
-"
-  (interactive (progn
-                 (unless (use-region-p)
-                   (error "region not selected."))
-                 (let ((style (rebox-get-style-from-prefix-arg
-                               current-prefix-arg))
-                       (refill (rebox-get-refill-from-prefix-arg
-                                current-prefix-arg)))
-                   (list (region-beginning) (region-end) :style style :refill
-                         refill))))
-  (let ((orig-m (point-marker))
-        (r-end (progn
-                 (goto-char r-end)
-                 (point-marker)))
-        (r-beg (progn
-                 (goto-char r-beg)
-                 (point-marker))))
-    ;; we can't possible recognize any style when region was improperly
-    ;; selected.
-    (when (rebox-ensure-region-whole-lines r-beg r-end)
-        (setq previous-style 111))
-    (save-restriction
-      (narrow-to-region r-beg r-end)
-      (goto-char orig-m)
-      (rebox-engine :style style
-                    :previous-style previous-style
-                    :refill refill
-                    :quiet quiet))))
-
-;;; Rebox the surrounding comment.
-;;;###autoload
-(defun* rebox-comment (&key style (refill t))
-  "Make box around current comment.  If no comment is defined,
-  build box around current consecutive non-blank lines.
-
-prefix arg is processed thusly:
-
-1) positive number - specifies 3 digit style or 2 digit base style.  WITH REFILL.
-2) negative number - style, no refill.
-3) \"-\"             - prompt for style interactively (legacy)
-4) universal arg   - apply `rebox-default-style', no refill.
-"
-  (interactive (list :style (rebox-get-style-from-prefix-arg current-prefix-arg)
-                     :refill (rebox-get-refill-from-prefix-arg current-prefix-arg)))
-  (if (use-region-p)
-      (error "rebox-comment doesn't understand regions."))
-  (let ((orig-m (point-marker))
-        previous-style)
-    (save-restriction
-      (condition-case err
-          (progn
-            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-            (setq previous-style (rebox-guess-style))
-            (rebox-engine :style style
-                          :refill refill
-                          :previous-style previous-style
-                          :marked-point orig-m))
-        ('rebox-error
-         (signal (car err) (cdr err)))
-        ('error
-         (error "rebox-comment wrapper: %s" err))))
-    (goto-char orig-m)))
-
-;;;###autoload
-(defun rebox-dwim-fill (arg)
-  "On first invocation, fill region or comment, unless style requested through prefix arg.
-
-If comment is not found, call `fill-paragraph'.
-
-On second consecutive invocation, box region or comment using
-prefix arg specified style or `rebox-default-style'.
-
-If region is active, the region will stay active after this command.
-
-This function processes prefix arg the same way as`rebox-comment' with the
-  exception that:
-
-            +----------------------------------------------------+
-            | specifying `-' will unbox the region or comment to |
-            | `rebox-default-unbox-style' with refill            |
-            +----------------------------------------------------+
-"
-  (interactive "*P")
-  (let ((orig-m (point-marker))
-        ;;copy of mark, so we can possibly change the insertion type
-        temp-mark
-        (style (rebox-get-style-from-prefix-arg current-prefix-arg
-                                                :use-default nil :ask nil))
-        previous-style)
-    (save-restriction
-      (condition-case err
-          (if (use-region-p)
-              (let (deactivate-mark)
-                (if (and (prog2
-                             (goto-char (region-beginning))
-                             (eq (point) (point-at-bol))
-                           (goto-char orig-m))
-                         (prog2
-                             (goto-char (region-end))
-                             (eq (point) (point-at-bol))
-                           (goto-char orig-m)))
-                    (progn
-                      (setq temp-mark (set-marker (make-marker) (mark)))
-                      (set-marker-insertion-type (if (< temp-mark orig-m)
-                                                     orig-m
-                                                   temp-mark)
-                                                 t)
-                      (narrow-to-region (region-beginning) (region-end))
-                      (setq previous-style (rebox-guess-style))
-                      (if (or (memq last-command '(rebox-dwim-fill))
-                              style)
-                          (progn
-                            (setq style (or style
-                                            (rebox-get-style-for-major-mode rebox-default-style)))
-                            (message "Rebox changing style: %s -> %s"
-                                     previous-style
-                                     style)
-                            (rebox-engine :style style
-                                          :refill t
-                                          :previous-style previous-style
-                                          :quiet t))
-                        (message "Refilling style: %s" previous-style)
-                        (if (eq previous-style 111)
-                            (progn
-                              (goto-char orig-m)
-                              (call-interactively 'fill-region))
-                          (rebox-engine :style previous-style
-                                        :refill t
-                                        :previous-style previous-style
-                                        :quiet t)))
-                      (set-mark temp-mark))
-                  (if (memq last-command '(rebox-dwim-fill))
-                      (let ((r-beg (prog2
-                                     (goto-char (region-beginning))
-                                     (point-marker)
-                                     (goto-char orig-m)))
-                            (r-end (prog2
-                                       (goto-char (region-end))
-                                       (point-marker)
-                                     (goto-char orig-m))))
-                        (rebox-ensure-region-whole-lines r-beg r-end)
-                        (if (< (point) (mark))
-                            (progn
-                              (set-mark r-end)
-                              (goto-char r-beg))
-                          (set-mark r-beg)
-                          (goto-char r-end))
-                        (rebox-dwim-fill arg)
-                        (set-marker orig-m (point)))
-                    (message "Refilling region")
-                    (fill-region (region-beginning) (region-end)))))
-            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-            (setq previous-style (rebox-guess-style))
-            (if (or (memq last-command '(rebox-dwim-fill))
-                    style)
-                (progn
-                  (setq style (or style
-                                  (rebox-get-style-for-major-mode rebox-default-style)))
-                  (message "Rebox changing style: %s -> %s"
-                           previous-style
-                           style)
-                  (rebox-engine :style style
-                                :refill t
-                                :previous-style previous-style
-                                :marked-point orig-m
-                                :quiet t))
-              (if (eq previous-style 111)
-                  (signal 'rebox-error nil)
-                (message "Refilling style: %s" previous-style)
-                (rebox-engine :refill t
-                              :previous-style previous-style
-                              :style previous-style
-                              :marked-point orig-m
-                              :quiet t))))
-        ('rebox-error
-         ;; (message "rebox returned: %s, calling `fill-paragraph'" err)
-         (goto-char orig-m)
-         (call-interactively 'fill-paragraph))
-        ('error
-         (error "rebox-dwim-fill wrapper: %s" err))))
-    (goto-char orig-m)))
-
-;;;###autoload
-(defun rebox-dwim-no-fill (arg)
-  "Rebox region or comment, never refilling.
-
-This function processes prefix arg the same way as`rebox-comment'
-with the
-  exception that:
-
-            +----------------------------------------------------+
-            | specifying `-' will unbox the region or comment to |
-            | `rebox-default-unbox-style'                       |
-            +----------------------------------------------------+
-"
-  (interactive "*P")
-  (let ((style (rebox-get-style-from-prefix-arg current-prefix-arg :ask nil))
-        (refill (rebox-get-refill-from-prefix-arg current-prefix-arg)))
-    (if (use-region-p)
-        (rebox-region (region-beginning)
-                      (region-end)
-                      :style style
-                      :refill nil)
-      (rebox-comment :style style
-                     :refill nil))))
-
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;;; auto-fill strategy                                                   ;;;
-  ;;;                                                                      ;;;
-  ;;; 1. make `normal-auto-fill-function' `rebox-do-auto-fill'             ;;;
-  ;;;                                                                      ;;;
-  ;;; 2. activate auto-fill-mode, setting `auto-fill-function' to          ;;;
-  ;;;    `rebox-do-auto-fill'                                              ;;;
-  ;;;                                                                      ;;;
-  ;;; 3. when auto-fillling, if we are in a box, we call the default value ;;;
-  ;;;    of `normal-auto-fill-function', since we've stripped off the      ;;;
-  ;;;    comments and any major specific auto-fill functions will be       ;;;
-  ;;;    confused.                                                         ;;;
-  ;;;                                                                      ;;;
-  ;;;    If we are not in a box, we call our saved value of                ;;;
-  ;;;    `normal-auto-fill-function'                                       ;;;
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-(defun rebox-do-auto-fill ()
-  "Try to fill as box first, if that fails use `do-auto-fill'
-"
-  (let ((orig-m (point-marker))
-        style)
-    (condition-case err
-        (save-restriction
-          (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-          (setq style (rebox-guess-style))
-          (if (= style 111)
-              (signal 'rebox-error nil)
-            (goto-char orig-m)
-            (rebox-engine :previous-style style
-                          :marked-point orig-m
-                          :refill 'auto-fill
-                          :quiet t
-                          :move-point nil
-                          :before-insp-func
-                          (lambda ()
-                            (goto-char marked-point)
-                            ;; top or bottom or left or right border
-                            (when (or (and previous-regexp1
-                                           (eq (line-number-at-pos) 1))
-                                      (and previous-regexp3
-                                           (eq (line-number-at-pos) (1- (line-number-at-pos (point-max)))))
-                                      (< (current-column) unindent-count)
-                                      (and previous-ee
-                                           (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
-                                           (looking-at-p "[ \t]*$")))
-                              (throw 'rebox-engine-done t)))
-                          :after-insp-func
-                          (lambda ()
-                            ;; pressing space at boundary - changing style from 520 to 521
-                            ;; moves point to bol, we need to move it back.
-                            (when (and (eq this-command 'rebox-space)
-                                       (bolp))
-                              (rebox-beginning-of-line nil)
-                              (setq marked-point (point)))))))
-      ('rebox-error
-       (goto-char orig-m)
-       (rebox-call-alternate-fill-function))
-       ('error
-       (error "rebox-do-auto-fill wrapper: %s" err)))))
-
-
-(defun rebox-call-alternate-fill-function (&optional fundamental)
-  ;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
-  (let ((fill-func (if fundamental
-                       (default-value 'normal-auto-fill-function)
-                     (cdr (assq 'normal-auto-fill-function rebox-save-env-alist)))))
-    (if fill-func
-        (funcall fill-func)
-      (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
-
-;;;###autoload
 (defun rebox-indent-new-line (arg)
   "Create newline.
 
@@ -1631,6 +1458,128 @@ and indent.
          (call-interactively (rebox-get-newline-indent-function)))
         ('error
          (error "rebox-indent-new-line wrapper: %s" err))))))
+
+;;;###autoload
+(defun rebox-dwim (arg)
+  "On first invocation, fill region or comment.
+
+Subsequent invocations cycle though styles defined in
+`rebox-style-loop', **REFILLING EACH TIME**.
+
+Style may be specified through prefix arg.
+
+If refilling is not desired, see `rebox-cycle'
+"
+  (interactive "*P")
+  (if (eq last-command this-command)
+      (rebox-cycle arg 'refill)
+    (if arg
+        (rebox-cycle arg 'refill)
+      (rebox-fill))))
+
+;;;###autoload
+(defun rebox-fill ()
+  "refill the current box or fill current region as a box"
+  (interactive "*")
+  (rebox-cycle 'keep-style t))
+
+;;;###autoload
+(defun rebox-cycle (arg &optional refill)
+  "Cycle current region or comment to the next style in loop.
+
+When called interactively, never refill.
+
+With universal arg (C-u), use previous style in loop.
+
+With numeric arg, use explicit style.
+"
+  (interactive "*P")
+  (let ((orig-m (point-marker))
+        ;;copy of mark, so we can possibly change the insertion type
+        temp-mark
+        style
+        movement
+        previous-style)
+    (cond ((and arg
+                (listp arg))
+           (setq movement -1))
+          ((null arg)
+           (setq movement 1))
+          ((and (numberp arg)
+                (> arg 0))
+           (setq style (rebox-get-canonical-style arg)))
+          ((eq arg 'keep-style))
+          (t
+           (error "invalid argument -- `%s'" arg)))
+    (save-restriction
+      (condition-case err
+          (flet ((work (r-beg r-end &optional preserve-region)
+                    (when preserve-region
+                      (setq temp-mark (set-marker (make-marker) (mark)))
+                      (set-marker-insertion-type (if (< temp-mark orig-m)
+                                                     orig-m
+                                                   temp-mark)
+                                                 t))
+                    (narrow-to-region r-beg r-end)
+                    (setq previous-style (rebox-guess-style))
+                    (cond ((eq arg 'keep-style)
+                           (setq style previous-style))
+                          ((not style)
+                           (setq style (rebox-loop-get-style previous-style movement))))
+                    (if (and refill (or (not style)
+                                        (eq arg 'keep-style)))
+                        (message "Refilling style %s" previous-style)
+                      (message "Rebox %s style: %s -> %s"
+                               (if refill
+                                   "REFILLING"
+                                 "changing")
+                               previous-style
+                               style))
+                    (rebox-engine :style style
+                                  :previous-style previous-style
+                                  :refill refill
+                                  :quiet t)
+                    (when preserve-region
+                      (set-mark temp-mark)
+                      (setq deactivate-mark nil))))
+            (if (use-region-p)
+                (if (and (prog2
+                             (goto-char (region-beginning))
+                             (eq (point) (point-at-bol))
+                           (goto-char orig-m))
+                         (prog2
+                             (goto-char (region-end))
+                             (eq (point) (point-at-bol))
+                           (goto-char orig-m)))
+                    (work (region-beginning) (region-end) 'preserve)
+                  (let ((r-beg (prog2
+                                   (goto-char (region-beginning))
+                                   (point-marker)
+                                 (goto-char orig-m)))
+                        (r-end (prog2
+                                   (goto-char (region-end))
+                                   (point-marker)
+                                 (goto-char orig-m))))
+                    (rebox-ensure-region-whole-lines r-beg r-end)
+                    (if (< (point) (mark))
+                        (progn
+                          (set-mark r-end)
+                          (goto-char r-beg))
+                      (set-mark r-beg)
+                      (goto-char r-end))
+                    (work (region-beginning) (region-end) 'preserve)
+                    (set-marker orig-m (point))))
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (work (point-min) (point-max))))
+        ('rebox-error
+         (goto-char orig-m)
+         (when (and refill
+                    (not (use-region-p)))
+           (call-interactively 'fill-paragraph)))
+        ('error
+         (error "rebox-cycle caught error: %s" err))))
+    (goto-char orig-m)))
+
 
 
 
@@ -1803,10 +1752,6 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (ss (aref style-data 12))
          (se (aref style-data 13))
          (unindent-count (+ previous-margin (length previous-ww)))
-         ;; (marked-col-within-box (progn
-         ;;                          (goto-char marked-point)
-         ;;                          (- (current-column)
-         ;;                             unindent-count)))
          )
 
 
@@ -1916,7 +1861,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
                             ;; bug # 7946 workaround
                             ;; should be fixed in next emacs23 release after 23.2.1
 			    (set-buffer (current-buffer))
-                             (format "%s" marked-point)
+                            (format "%s" marked-point)
 			    (goto-char marked-point)
                             (current-column))))
           (goto-char (point-min))
