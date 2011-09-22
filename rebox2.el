@@ -11,10 +11,10 @@
 ;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
-;; Version: 0.5
-;; Last-Updated: Wed Sep 21 17:03:19 2011 (+0800)
+;; Version: 0.6
+;; Last-Updated: Thu Sep 22 13:44:04 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 272
+;;     Update #: 322
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -84,6 +84,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;;; Change Log:
+;;
+;;
+;; 0.6
+;;
+;; * add `rebox-allowance' customization to allow title in top/bottom border
+;;   or not.
+;; * restructured internal datastructure to be hash-table.
 ;;
 ;; 0.5
 ;;
@@ -246,6 +253,29 @@
   (require 'filladapt nil t)
   (require 'cl))
 
+;; functions passed to rebox-engine inspect these variables
+(eval-when-compile
+  (defvar previous-nn)
+  (defvar previous-ne)
+  (defvar previous-sw)
+  (defvar previous-ss)
+  (defvar previous-se)
+  (defvar previous-regexp3)
+  (defvar previous-margin)
+  (defvar previous-ee)
+  (defvar previous-nw)
+  (defvar unindent-count)
+  (defvar orig-m)
+  (defvar orig-col)
+  (defvar max-n)
+  (defvar marked-point)
+  (defvar curr-ww)
+  (defvar previous-regexp1)
+  (defvar curr-regexp1)
+  )
+
+
+
 ;; Box templates.  First number is style, second is recognition weight.
 (defconst rebox-templates
 
@@ -369,7 +399,7 @@
 
     (16 126
         "?,----"
-        "?|box123456"
+        "?| box123456"
         "?`----")
 
     (17 226
@@ -377,12 +407,12 @@
         "?| box123456"
         "?`----------")
 
-    (26 236
+    (26 126
         "??,----"
         "??| box123456"
         "??`----")
 
-    (27 136
+    (27 226
         "??,----------"
         "??| box123456"
         "??`----------")
@@ -439,15 +469,25 @@
 
     ;; boxquote style
 
-    (126 225
-         ",----"
-         "|box123456"
-         "`----")
+    (126 126
+        ",----"
+        "| box123456"
+        "`----")
 
-    (127 126
-         ",----------"
-         "| box123456"
-         "`----------")
+    (127 226
+        ",----------"
+        "| box123456"
+        "`----------")
+
+    (136 126
+        ",----"
+        "| box123456"
+        "`----")
+
+    (137 226
+        ",----------"
+        "| box123456"
+        "`----------")
 
     (141 143
          "| box123456 ")
@@ -568,14 +608,9 @@
 
     ))
 
-(defvar rebox-cached-style nil
-  "cached style used during yanking, to ensure yank-pop doesn't pick up a different style based on the yanked text")
-(make-variable-buffer-local 'rebox-cached-style)
-
-(defvar rebox-save-env-alist nil
-  "backup value saved for here for mode deactivation")
-(make-variable-buffer-local 'rebox-save-env-alist)
-(put 'rebox-save-env-alist 'permanent-local t)
+(defvar rebox-cache nil)
+(make-variable-buffer-local 'rebox-cache)
+(put 'rebox-cache 'permanent-local t)
 
 (defvar rebox-save-env-vars
   '(comment-auto-fill-only-comments
@@ -609,18 +644,36 @@ use `uncomment-region'.
   :type '(repeat number)
   :group 'rebox)
 
+(defcustom rebox-min-fill-column nil
+  "The minimum fill-column to use when filling boxes.
+Boxes that start at column0 will be at least this many columns wide.
+
+nil means boxes resize according to text."
+  :group 'rebox)
+
+(defcustom rebox-allowances '(top-title bottom-title)
+  "If `top-title' is in this list, then a title may
+be present in the top border.
+
+If `bottom-title' is present then ditto for bottom.
+
+Both would look like:
+
+    *={ hi }======*
+    | a b c  asdf |
+    *====={ bye }=*
+
+For a partial-width bottom border, a title is never allowed."
+  :type '(repeat symbol)
+  :group 'rebox)
+
+
 (defcustom rebox-keep-blank-lines t
   "Non-nil gives rebox permission to truncate blank lines at
 beginning of box, end, and more than three consecutive blank
 lines in the body of box."
   :type 'boolean
   :group 'rebox)
-
-(defcustom rebox-min-fill-column nil
-  "The minimum fill-column to use when filling boxes.
-Boxes that start at column0 will be at least this many columns wide.
-
-nil means boxes resize according to text.")
 
 (defcustom rebox-mode-line-string " rebox"
   ""
@@ -716,7 +769,7 @@ header.
 "
   :init-value nil
   :lighter rebox-mode-line-string
-  :version "0.5"
+  :version "0.6"
   :keymap '(([(shift return)] . rebox-indent-new-line)
             ([(meta q)] . rebox-dwim)
             ([(meta Q)] . rebox-cycle)
@@ -758,28 +811,6 @@ header.
 (defun turn-off-rebox ()
   (rebox-mode 0))
 
-
-;; functions passed to rebox-engine inspect these variables
-(eval-when-compile
-  (defvar previous-nn)
-  (defvar previous-ne)
-  (defvar previous-sw)
-  (defvar previous-ss)
-  (defvar previous-se)
-  (defvar previous-regexp3)
-  (defvar previous-margin)
-  (defvar previous-ee)
-  (defvar previous-nw)
-  (defvar unindent-count)
-  (defvar orig-m)
-  (defvar orig-col)
-  (defvar max-n)
-  (defvar marked-point)
-  (defvar ww)
-  (defvar previous-regexp1)
-  (defvar regexp1)
-)
-
 (put 'rebox-error
      'error-conditions
      '(error rebox-error))
@@ -803,6 +834,14 @@ header.
 (put 'rebox-mid-line-comment-found
      'error-message
      "Comment started mid-line.")
+
+(put 'rebox-invalid-style-error
+     'error-conditions
+     '(error rebox-error rebox-invalid-style-error))
+
+(put 'rebox-invalid-style-error
+     'error-message
+     "Invalid style.")
 
 ;; we don't use syntax table for whitespace definition here because we don't
 ;; trust major-modes to define them properly.
@@ -832,19 +871,31 @@ header.
 ;; Template ingestion.
 
 ;;; Information about registered templates.
-(defvar rebox-style-data nil)
+(defvar rebox-style-hash nil
+  "contails parsed style hash")
 
 ;;; Register all box templates.
 
 (defun rebox-register-all-templates ()
-  (setq rebox-style-data nil)
-  (let ((templates rebox-templates))
-    (while templates
-      (let ((template (car templates)))
-        (rebox-register-template (car template)
-                                 (cadr template)
-                                 (cddr template)))
-      (setq templates (cdr templates)))))
+  (setq rebox-style-hash (make-hash-table :test 'eq :size 200))
+  (dolist (template rebox-templates)
+    (rebox-register-template (first template)
+                             (second template)
+                             (nthcdr 2 template))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; On merge-se:                                                              ;
+;                                                                           ;
+;   In the original version, if line3 was shorter than line2, then it's     ;
+;   considered a merge of SE.  I think this is because of the "*/" C style  ;
+;   end-comment.  However, the boxes would never look right if that was the ;
+;   case, and I don't see any box style that look good when used this way.  ;
+;                                                                           ;
+;   Styles like the boxquote style need the shorter third line to be        ;
+;   considered considered SW.                                               ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 ;;; Register a single box template.
 
@@ -866,7 +917,6 @@ line is shorter, it represents a start comment string to be bundled within the
 first line of the comment text.  If the third line is shorter, it represents
 an end comment string to be bundled at the end of the comment text, and
 refilled with it."
-
   (cond ((< style 100)
          (let ((pairs rebox-language-character-alist)
                language character)
@@ -882,11 +932,13 @@ refilled with it."
                           (setq line (replace-match character t t line)))
                         line)
                       lines)))))
-        ((assq style rebox-style-data)
+        ((gethash style rebox-style-hash)
          (error "Style %d defined more than once" style))
         (t
          (let (line1 line2 line3 regexp1 regexp2 regexp3
-                     merge-nw merge-se nw nn ne ww ee sw ss se)
+                     regexp1-title regexp3-title
+                     merge-nw merge-sw nw nn ne ww ee sw ss se
+                     (hash (make-hash-table :test 'eq :size 20)))
            (if (string-match "box123456" (car lines))
                (setq line1 nil
                      line2 (car lines)
@@ -898,7 +950,7 @@ refilled with it."
                (error "Erroneous template for %d style" style)))
            (setq line3 (and lines (car lines)))
            (setq merge-nw (and line1 (< (length line1) (length line2)))
-                 merge-se (and line3 (< (length line3) (length line2)))
+                 merge-sw (and line3 (< (length line3) (length line2)))
                  nw       (cond ((not line1) nil)
                                 (merge-nw line1)
                                 ((zerop (match-beginning 0)) nil)
@@ -916,15 +968,15 @@ refilled with it."
                  ee       (cond ((= (match-end 0) (length line2)) nil)
                                 (t (rebox-rstrip (substring line2 (match-end 0)))))
                  sw       (cond ((not line3) nil)
-                                (merge-se nil)
+                                (merge-sw (rebox-rstrip line3))
                                 ((zerop (match-beginning 0)) nil)
                                 (t (substring line3 0 (match-beginning 0))))
                  ss       (cond ((not line3) nil)
-                                (merge-se nil)
+                                (merge-sw nil)
                                 (t (let ((x (aref line3 (match-beginning 0))))
                                      (if (= x ? ) nil x))))
                  se       (cond ((not line3) nil)
-                                (merge-se (rebox-rstrip line3))
+                                (merge-sw nil)
                                 ((= (match-end 0) (length line3)) nil)
                                 (t (rebox-rstrip (substring line3 (match-end 0))))))
            (setq regexp1 (cond
@@ -944,20 +996,53 @@ refilled with it."
                                       (rebox-regexp-quote ee :lstrip nil)
                                       "\n"))
                  regexp3 (cond
-                          (merge-se
-                           (concat "^.*" (rebox-regexp-quote se :lstrip nil) "\n"))
-                          ((and sw (not ss) (not se))
-                           (concat "^[ \t]*" (rebox-regexp-quote sw :rstrip nil) "\n"))
+                          ((or merge-sw
+                               (and sw (not ss) (not se)))
+                           (concat "^[ \t]*" (rebox-regexp-quote sw :lstrip nil) "\n"))
                           ((or sw ss se)
-                           (concat "^[ \t]*" (rebox-regexp-quote sw :rstrip nil)
+                           (concat "^[ \t]*"
+                                   (rebox-regexp-quote sw :lstrip nil)
                                    (rebox-regexp-ruler ss)
                                    (rebox-regexp-quote se :lstrip nil) "\n"))))
-           (setq rebox-style-data
-                 (cons (cons style
-                             (vector weight regexp1 regexp2 regexp3
-                                     merge-nw merge-se
-                                     nw nn ne ww ee sw ss se))
-                       rebox-style-data))))))
+           (setq regexp1-title (cond
+                                (merge-nw
+                                 (concat "^[ \t]*" (rebox-regexp-quote nw) "\\(.*?\\)[ \t]*\n"))
+                                ((and nw (not nn) (not ne))
+                                 (concat "^[ \t]*" (rebox-regexp-quote nw) "\\(.*?\\)[ \t]*\n"))
+                                ((or nw nn ne)
+                                 (concat "^[ \t]*" (rebox-regexp-quote nw)
+                                         (if nn
+                                             (concat (regexp-quote (string nn))
+                                                     "*")
+                                           "")
+                                         "\\(.*?\\)"
+                                         (if nn
+                                             (concat (regexp-quote (string nn))
+                                                     "*")
+                                           "")
+                                         (rebox-regexp-quote ne :lstrip nil) "\n")))
+                 regexp3-title (cond
+                                ((or merge-sw
+                                     (and sw (not ss) (not se)))
+                                 (concat "^[ \t]*" (rebox-regexp-quote sw :lstrip nil) "\n"))
+                                ((or sw ss se)
+                                 (concat "^[ \t]*" (rebox-regexp-quote sw :rstrip nil)
+                                         "\\(.*?\\)"
+                                         (if ss
+                                             (concat (regexp-quote (string ss))
+                                                     "*")
+                                           "")
+                                         (rebox-regexp-quote se :lstrip nil) "\n"))))
+           (dolist (k '(style weight
+                        regexp1 regexp2 regexp3
+                        regexp1-title regexp3-title
+                        merge-nw merge-sw
+                        nw nn ne
+                        ww ee
+                        sw ss se))
+             (when (symbol-value k)
+               (puthash (intern (concat ":" (symbol-name k))) (symbol-value k) hash)))
+           (puthash style hash rebox-style-hash)))))
 
 (defun rebox-get-canonical-style (style &optional c-start)
   "return 3 digit style based on 2 digit style and a comment-start type string"
@@ -1249,15 +1334,15 @@ With universal ARG, always call `rebox-kill-line-function'.
                                (lambda ()
                                  ;; try to fix the point
                                  (goto-char marked-point)
-                                 (let ((new-line-num (if regexp1
+                                 (let ((new-line-num (if curr-regexp1
                                                          (1- (line-number-at-pos))
                                                        (line-number-at-pos)))
-                                       (new-col (- (current-column) previous-margin (length ww))))
+                                       (new-col (- (current-column) previous-margin (length curr-ww))))
                                    (when (and (< new-line-num 1)
                                               (>= orig-line 1))
                                      ;; goto-line
                                      (goto-char (point-min))
-                                     (forward-line (1- (+ orig-line (if regexp1 1 0)))))
+                                     (forward-line (1- (+ orig-line (if curr-regexp1 1 0)))))
                                    (when (and (< new-col 0)
                                               (>= orig-col 0))
                                      (move-beginning-of-line 1)
@@ -1324,7 +1409,7 @@ else call the default binding of M-c.
 
 with argument N, move n columns."
   (interactive "*")
-  (let ((orig-func (cdr (assq 'meta-c-func rebox-save-env-alist))))
+  (let ((orig-func (lookup-key [(meta c)] (current-global-map))))
     (rebox-left-border-wrapper (lambda ()
                                  (if (< (current-column) unindent-count)
                                      (center-region (point-min) (point-max))
@@ -1332,8 +1417,7 @@ with argument N, move n columns."
                                      (call-interactively orig-func)
                                      (set-marker orig-m (point))))
                                  (throw 'rebox-engine-done t))
-                               orig-func
-                               )))
+                               orig-func)))
 
 
 (defun rebox-space (n)
@@ -1430,13 +1514,13 @@ and indent.
                                                     (progn
                                                       (goto-char orig-m)
                                                       (+ previous-margin
-                                                         (length ww)
+                                                         (length curr-ww)
                                                          (current-column)))
                                                   (skip-chars-forward " \t")
                                                   (+ previous-margin
-                                                     (length ww)
+                                                     (length curr-ww)
                                                      (current-column)))))
-                                      (setq text-beg-col (+ previous-margin (length ww))))
+                                      (setq text-beg-col (+ previous-margin (length curr-ww))))
                                     (goto-char orig-m)
                                     (newline arg))))
                   (goto-char orig-m)
@@ -1571,6 +1655,8 @@ With numeric arg, use explicit style.
                     (set-marker orig-m (point))))
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (work (point-min) (point-max))))
+        ('rebox-invalid-style-error
+         (error "%s" err))
         ('rebox-error
          (goto-char orig-m)
          (when (and refill
@@ -1595,7 +1681,7 @@ With numeric arg, use explicit style.
             (signal 'rebox-error nil))
           (save-restriction
             (when (and (eq last-command 'yank)
-                       (not rebox-cached-style))
+                       (not (gethash :last-style (rebox-cache))))
               (signal 'rebox-error nil))
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments
                                    :try-whole-box try-whole-box)
@@ -1616,8 +1702,8 @@ With numeric arg, use explicit style.
             (if (eq previous-style 111)
                 (signal 'rebox-error '("style is 111"))
               (if (eq last-command 'yank)
-                  (assert (eq rebox-cached-style previous-style))
-                (setq rebox-cached-style previous-style))
+                  (assert (eq (gethash :last-style (rebox-cache)) previous-style))
+                (puthash :last-style previous-style (rebox-cache)))
               (rebox-engine :style previous-style
                             :marked-point orig-m
                             :quiet t
@@ -1631,7 +1717,7 @@ With numeric arg, use explicit style.
                             :after-insp-func
                             after-insp-func))))
       ('rebox-error
-       (setq rebox-cached-style nil)
+       (puthash :last-style nil (rebox-cache))
        (goto-char orig-m)
        (and orig-func
             (call-interactively orig-func)))
@@ -1700,7 +1786,6 @@ Returns t when changes were made to the markers."
     changes-made))
 
 (defun* rebox-engine (&key style
-                           before-insp-func
                            mod-func
                            before-insp-func
                            after-insp-func
@@ -1721,38 +1806,38 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (previous-margin (rebox-left-margin))
          (previous-style (or previous-style
                              (rebox-guess-style)))
-         (previous-style-data (cdr (assq previous-style rebox-style-data)))
-         (previous-regexp1 (aref previous-style-data 1))
-         (previous-regexp2 (aref previous-style-data 2))
-         (previous-regexp3 (aref previous-style-data 3))
-         (previous-merge-nw (aref previous-style-data 4))
-         (previous-merge-se (aref previous-style-data 5))
-         (previous-nw (aref previous-style-data 6))
-         (previous-nn (aref previous-style-data 7))
-         (previous-ne (aref previous-style-data 8))
-         (previous-ww (aref previous-style-data 9))
-         (previous-ee (aref previous-style-data 10))
-         (previous-sw (aref previous-style-data 11))
-         (previous-ss (aref previous-style-data 12))
-         (previous-se (aref previous-style-data 13))
+         (prev-h (gethash previous-style rebox-style-hash))
+         (previous-regexp1 (gethash :regexp1 prev-h))
+         (previous-regexp2 (gethash :regexp2 prev-h))
+         (previous-regexp3 (gethash :regexp3 prev-h))
+         (previous-merge-nw (gethash :merge-nw prev-h))
+         (previous-merge-sw (gethash :merge-sw prev-h))
+         (previous-nw (gethash :nw prev-h))
+         (previous-nn (gethash :nn prev-h))
+         (previous-ne (gethash :ne prev-h))
+         (previous-ww (gethash :ww prev-h))
+         (previous-ee (gethash :ee prev-h))
+         (previous-sw (gethash :sw prev-h))
+         (previous-ss (gethash :ss prev-h))
+         (previous-se (gethash :se prev-h))
          (style (or style previous-style))
-         (style-data (or (cdr (assq style rebox-style-data))
-                         (signal 'rebox-comment-not-found-error (list (format "style (%s) is unknown" style)))))
-         (regexp1 (aref style-data 1))
-         (regexp2 (aref style-data 2))
-         (regexp3 (aref style-data 3))
-         (merge-nw (aref style-data 4))
-         (merge-se (aref style-data 5))
-         (nw (aref style-data 6))
-         (nn (aref style-data 7))
-         (ne (aref style-data 8))
-         (ww (aref style-data 9))
-         (ee (aref style-data 10))
-         (sw (aref style-data 11))
-         (ss (aref style-data 12))
-         (se (aref style-data 13))
+         (curr-h (or (gethash style rebox-style-hash)
+                     (signal 'rebox-invalid-style-error (list (format "style (%s) is unknown" style)))))
+         (curr-regexp1 (gethash :regexp1 curr-h))
+         (curr-regexp2 (gethash :regexp2 curr-h))
+         (curr-regexp3 (gethash :regexp3 curr-h))
+         (curr-merge-nw (gethash :merge-nw curr-h))
+         (curr-merge-sw (gethash :merge-sw curr-h))
+         (curr-nw (gethash :nw curr-h))
+         (curr-nn (gethash :nn curr-h))
+         (curr-ne (gethash :ne curr-h))
+         (curr-ww (gethash :ww curr-h))
+         (curr-ee (gethash :ee curr-h))
+         (curr-sw (gethash :sw curr-h))
+         (curr-ss (gethash :ss curr-h))
+         (curr-se (gethash :se curr-h))
          (unindent-count (+ previous-margin (length previous-ww)))
-         )
+         title-plist)
 
 
     (unless quiet
@@ -1801,7 +1886,12 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
       ;; Remove all previous comment marks.
       (unless (eq previous-style 111)
-        (rebox-unbuild previous-style))
+        (setq title-plist (rebox-unbuild prev-h)))
+
+      ;; don't lose title when we are traversing style loop
+      (if (memq last-command '(rebox-cycle rebox-dwim))
+          (setq title-plist (gethash :title-plist (rebox-cache)))
+        (puthash :title-plist title-plist (rebox-cache)))
 
       (unless rebox-keep-blank-lines
         ;; Remove all spurious whitespace.
@@ -1835,7 +1925,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
                   ;; in case editing functions check major-mode for
                   ;; indentation, etc.
                   (major-mode 'fundamental-mode)
-                  (fill-column (rebox-get-fill-column ww ee previous-margin)))
+                  (fill-column (rebox-get-fill-column curr-ww curr-ee previous-margin title-plist)))
               (funcall mod-func))
           (error "%s is not a function" mod-func)))
 
@@ -1852,7 +1942,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
       ;; Possibly refill, then build the comment box.
       (let ((indent-tabs-mode nil))
-        (rebox-build refill previous-margin style marked-point move-point))
+        (rebox-build refill previous-margin curr-h marked-point move-point title-plist))
       (setq clean-undo-list t))
 
     ;; Retabify to the left only (adapted from tabify.el).
@@ -2013,43 +2103,45 @@ returns guess as single digit."
 
 (defun rebox-guess-style ()
   "Guess the current box style from the text in the whole (narrowed) buffer."
-  (let ((style-data rebox-style-data)
-        best-style best-weight)
-    ;; Let's try all styles in turn.  A style has to match exactly to be
-    ;; eligible.  More heavy is a style, more prone it is to be retained.
-    (while style-data
-      (let* ((style (caar style-data))
-             (data (cdar style-data))
-             (weight (aref data 0))
-             (regexp1 (aref data 1))
-             (regexp2 (aref data 2))
-             (regexp3 (aref data 3))
-             (min-lines (length (remove nil (list regexp1 regexp2 regexp3))))
-             (limit (cond
-                     ((and best-weight (<= weight best-weight))
-                      nil)
-                     ((< (count-lines (point-min) (point-max)) min-lines)
-                      nil)
-                     ((not regexp3)
-                      (point-max))
-                     ((progn (goto-char (point-max))
-                             (forward-line -1)
-                             (looking-at regexp3))
-                      (point)))))
-        (when limit
-          (goto-char (point-min))
-          (cond ((not regexp1))
-                ((looking-at regexp1) (goto-char (match-end 0)))
-                (t (setq limit nil)))
-          (when (and limit regexp2)
-            (while (and (< (point) limit) (looking-at regexp2))
-              (goto-char (match-end 0)))
-            (unless (= (point) limit)
-              (setq limit nil)))
-          (when limit
-            (setq best-style style
-                  best-weight weight))))
-      (setq style-data (cdr style-data)))
+  (let (best-style best-weight)
+    (maphash
+     (lambda (style hash)
+       ;; Let's try all styles in turn.  A style has to match exactly to be
+       ;; eligible.  More heavy is a style, more prone it is to be retained.
+       (let* ((weight (gethash :weight hash))
+              (regexp1 (if (memq 'top-title rebox-allowances)
+                           (gethash :regexp1-title hash)
+                         (gethash :regexp1 hash)))
+              (regexp2 (gethash :regexp2 hash))
+              (regexp3 (if (memq 'bottom-title rebox-allowances)
+                           (gethash :regexp3-title hash)
+                         (gethash :regexp3 hash)))
+              (min-lines (length (remove nil (list regexp1 regexp2 regexp3))))
+              (limit (cond
+                      ((and best-weight (<= weight best-weight))
+                       nil)
+                      ((< (count-lines (point-min) (point-max)) min-lines)
+                       nil)
+                      ((not regexp3)
+                       (point-max))
+                      ((progn (goto-char (point-max))
+                              (forward-line -1)
+                              (looking-at regexp3))
+                       (point)))))
+         (when limit
+           (goto-char (point-min))
+           (cond ((not regexp1))
+                 ((looking-at regexp1) (goto-char (match-end 0)))
+                 (t (setq limit nil)))
+           (when (and limit regexp2)
+             (while (and (< (point) limit) (looking-at regexp2))
+               (goto-char (match-end 0)))
+             (unless (= (point) limit)
+               (setq limit nil)))
+           (when limit
+             (setq best-style style
+                   best-weight weight)))))
+     rebox-style-hash)
     best-style))
 
 (defun* rebox-line-has-comment (&key (move-multiline t)
@@ -2057,8 +2149,7 @@ returns guess as single digit."
   (let ((bare-comment-end (and comment-end (rebox-rstrip (rebox-lstrip comment-end))))
         (bare-comment-start (and comment-start (rebox-rstrip (rebox-lstrip comment-start))))
         (starting-bol (point-at-bol))
-        comment-start-pos
-        )
+        comment-start-pos)
     (end-of-line 1)
     (setq comment-start-pos (comment-beginning))
     (unless comment-start-pos
@@ -2115,7 +2206,7 @@ With no-rstrip specified, don't strip spaces to the right."
 maybe followed by spaces or tabs.  Is CHARACTER is nil, return
 the empty regexp."
   (if character
-      (concat (regexp-quote (make-string 1 character)) "+[ \t]*")
+      (concat (regexp-quote (string character)) "+[ \t]*")
     ""))
 
 
@@ -2137,24 +2228,26 @@ the empty regexp."
 
 ;; Reconstruction of boxes.
 
-(defun rebox-unbuild (style)
-  (let* ((data (cdr (assq style rebox-style-data)))
-         (merge-nw (aref data 4))
-         (merge-se (aref data 5))
-         (nw (aref data 6))
-         (nn (aref data 7))
-         (ne (aref data 8))
-         (ww (aref data 9))
-         (ee (aref data 10))
-         (sw (aref data 11))
-         (ss (aref data 12))
-         (se (aref data 13))
+(defun rebox-unbuild (style-h)
+  (let* ((merge-nw (gethash :merge-nw style-h))
+         (merge-sw (gethash :merge-sw style-h))
+         (nw (gethash :nw style-h))
+         (nn (gethash :nn style-h))
+         (ne (gethash :ne style-h))
+         (ww (gethash :ww style-h))
+         (ee (gethash :ee style-h))
+         (sw (gethash :sw style-h))
+         (ss (gethash :ss style-h))
+         (se (gethash :se style-h))
          (nw-regexp (and nw (regexp-quote nw)))
          (ww-regexp (and ww (regexp-quote ww)))
          (sw-regexp (and sw (regexp-quote sw)))
-
-         limit-m
-         )
+         (top-title "")
+         (bottom-title "")
+         top-title-start
+         bottom-title-start
+         max-title-len
+         limit-m)
     ;; Clean up first line.
     (goto-char (point-min))
     (end-of-line)
@@ -2164,14 +2257,18 @@ the empty regexp."
         (when (and (>= start (point-min))
                    (string-equal ne (buffer-substring start (point))))
           (delete-region (point) (- (point) (length ne))))))
-    (beginning-of-line)
+    (forward-line 0)
     (when (and nw-regexp (search-forward-regexp nw-regexp (point-at-eol)))
         (replace-match (make-string (- (match-end 0) (match-beginning 0))
-                                    ? )))
+                                    ? ))
+        (setq top-title-start (point)))
     (when nn
-      (let ((count (skip-chars-forward (char-to-string nn))))
-        (delete-char (- count))
-        (insert (make-string count ? ))))
+      (let ((len (save-excursion
+                   (skip-chars-forward (char-to-string nn)))))
+        (insert (make-string len ? ))
+        (delete-region (point) (+ (point) len)))
+      (goto-char (point-at-eol))
+      (delete-region (point) (+ (point) (skip-chars-backward (char-to-string nn)))))
 
     ;; Clear the top border line.
     ;;
@@ -2189,7 +2286,15 @@ the empty regexp."
       (goto-char (point-at-bol))
       (if (looking-at-p rebox-blank-line-regexp)
           (delete-region (point) (point-at-bol 2))
-        (error "Top border should be clear now.  Debug me.")))
+        (if (memq 'top-title rebox-allowances)
+            (progn
+              (goto-char (point-at-eol))
+              (skip-chars-backward " \t")
+              (setq top-title (buffer-substring-no-properties top-title-start (point)))
+              (goto-char (point-at-bol))
+              (delete-region (point) (point-at-bol 2)))
+          (error "Top border should be clear now.  Debug me."))))
+
     ;; Clean up last line.
     (goto-char (point-max))
     (skip-chars-backward " \t\n")
@@ -2201,11 +2306,15 @@ the empty regexp."
     (forward-line 0)
     (when (and sw-regexp (search-forward-regexp sw-regexp (point-at-eol)))
         (replace-match (make-string (- (match-end 0) (match-beginning 0))
-                                    ? )))
+                                    ? ))
+        (setq bottom-title-start (point)))
     (when ss
-      (let ((count (skip-chars-forward (char-to-string ss))))
-        (delete-char (- count))
-        (insert (make-string count ? ))))
+      (let ((len (save-excursion
+                   (skip-chars-forward (char-to-string ss)))))
+        (insert (make-string len ? ))
+        (delete-region (point) (+ (point) len)))
+      (goto-char (point-at-eol))
+      (delete-region (point) (+ (point) (skip-chars-backward (char-to-string ss)))))
     (setq limit-m (make-marker))
     ;; if there was any bottom border, and it's now just blanks, delete bottom line
     (if (or se sw-regexp ss)
@@ -2213,7 +2322,15 @@ the empty regexp."
           (goto-char (point-at-bol))
           (if (looking-at-p rebox-blank-line-regexp)
               (delete-region (point) (point-at-bol 2))
-            (error "Top border should be clear now.  Debug me."))
+            (if (and (memq 'bottom-title rebox-allowances)
+                     (not merge-sw))
+                (progn
+                  (goto-char (point-at-eol))
+                  (skip-chars-backward " \t")
+                  (setq bottom-title (buffer-substring-no-properties bottom-title-start (point)))
+                  (goto-char (point-at-bol))
+                  (delete-region (point) (point-at-bol 2)))
+              (error "Bottom border should be clear now.  Debug me.")))
           (set-marker limit-m (point)))
       (set-marker limit-m (1+ (point))))
     ;; Clean up all lines.
@@ -2230,40 +2347,36 @@ the empty regexp."
       (when (and ww-regexp (search-forward-regexp ww-regexp (point-at-eol)))
           (replace-match (make-string (- (match-end 0) (match-beginning 0))
                                       ? )))
-      (forward-line 1))))
+      (forward-line 1))
+    (setq max-title-len )
+    (list :top-title top-title :bottom-title bottom-title :max-len (max (length top-title)
+                                                                        (length bottom-title)))))
 
-
-(defun rebox-build (refill margin style marked-point move-point)
+;; -lw- here
+(defun rebox-build (refill margin style-h marked-point move-point title-plist)
 "After refilling it if REFILL is not nil, while respecting a left MARGIN,
 put the narrowed buffer back into a boxed comment according to
 box STYLE."
-  (let* ((data (cdr (assq style rebox-style-data)))
-         (merge-nw (aref data 4))
-         (merge-se (aref data 5))
-         (nw (aref data 6))
-         (nn (aref data 7))
-         (ne (aref data 8))
-         (ww (aref data 9))
-         (ee (aref data 10))
-         (sw (aref data 11))
-         (ss (aref data 12))
-         (se (aref data 13))
+  (let* ((merge-nw (gethash :merge-nw style-h))
+         (merge-sw (gethash :merge-sw style-h))
+         (nw (gethash :nw style-h))
+         (nn (gethash :nn style-h))
+         (ne (gethash :ne style-h))
+         (ww (gethash :ww style-h))
+         (ee (gethash :ee style-h))
+         (sw (gethash :sw style-h))
+         (ss (gethash :ss style-h))
+         (se (gethash :se style-h))
+         (top-title (or (plist-get title-plist :top-title) ""))
+         (bottom-title (or (plist-get title-plist :bottom-title) ""))
+         (title-max-len (or (plist-get title-plist :max-len) 0))
          right-margin
          count-trailing-spaces
          limit-m
          )
 
-    ;; Merge a short end delimiter now, so it gets refilled with text.
-    (if merge-se
-        (progn
-          (goto-char (point-max))
-          (insert "\n")
-          (goto-char (1- (point-max)))
-          (setq limit-m (point-marker))
-          (insert (make-string margin ? )
-                  se)
-          (setq se nil))
-      (setq limit-m (point-max-marker)))
+    (setq limit-m (point-max-marker))
+
     ;; Possibly refill, and adjust margins to account for left inserts.
     (if refill
         (let (;;;; whatever adaptive filling should take care of this
@@ -2274,7 +2387,7 @@ box STYLE."
                                                (memq major-mode rebox-hybrid-major-modes))
                                            fill-paragraph-function
                                          nil))
-              (fill-column (rebox-get-fill-column ww ee margin))
+              (fill-column (rebox-get-fill-column ww ee margin title-plist))
               ;; some filling functions will consult major-mode for filling
               ;; advice, we don't want this since we've removed the
               ;; comment-starts.
@@ -2288,7 +2401,8 @@ box STYLE."
             (setq count-trailing-spaces nil)
             (fill-region (point-min) limit-m)))
       (setq count-trailing-spaces marked-point))
-    (setq right-margin (max (+ (rebox-right-margin :count-trailing-spaces count-trailing-spaces)
+    (setq right-margin (max (+ (max (rebox-right-margin :count-trailing-spaces count-trailing-spaces)
+                                    title-max-len)
                                (length ww)
                                margin)
                             ;; minimum box width is 1
@@ -2301,14 +2415,20 @@ box STYLE."
     (goto-char (point-min))
     (cond (merge-nw
            (insert (make-string (- margin (current-column)) ? )
-                   nw)
-           (insert "\n"))
+                   nw
+                   top-title
+                   "\n"))
           ((or nw nn ne)
            (indent-to margin)
            (when nw
              (insert nw))
-           (if (not (or nn ne))
-               (delete-char (- (skip-chars-backward " ")))
+           (when (or nn ne)
+             (string-match "\\`\\([ \t]*\\)" top-title)
+             (insert (replace-match (make-string (length (match-string 0 top-title))
+                                                 (or nn ? ))
+                              nil
+                              t
+                              top-title))
              (insert (make-string (- right-margin (current-column))
                                   (or nn ? )))
              (when ne
@@ -2323,16 +2443,19 @@ box STYLE."
         (when ee
           (end-of-line)
           (indent-to right-margin)
-          (insert ee)
-          (delete-char (- (skip-chars-backward " ")))))
+          (insert ee)))
       (forward-line 1))
     ;; Construct the bottom line.
     (when (or sw ss se)
       (indent-to margin)
       (when sw
         (insert sw))
-      (if (not (or ss se))
-          (delete-char (- (skip-chars-backward " ")))
+      (when (or ss se)
+        (string-match "\\`\\([ \t]*\\)" bottom-title)
+        (insert (replace-match (make-string (length (match-string 0 bottom-title)) (or ss ? ))
+                               nil
+                               t
+                               bottom-title))
         (insert (make-string (- right-margin (current-column))
                              (or ss ? )))
         (when se
@@ -2348,7 +2471,7 @@ box STYLE."
              (min-line (if (or merge-nw nw nn ne)
                            2
                          1))
-             (max-line (if (or merge-se sw ss se)
+             (max-line (if (or merge-sw sw ss se)
                            (- point-max-line 2)
                          (- point-max-line 1)))
              (min-col (+ margin (length ww)))
@@ -2436,31 +2559,40 @@ count trailing spaces or t to always count.
             (cdr (assq major-mode rebox-newline-indent-function-alist))
             rebox-newline-indent-function-default)))
 
-(defun rebox-get-fill-column (ww ee margin)
-  (- (max fill-column
-          (if (and rebox-min-fill-column
-                   (numberp rebox-min-fill-column))
-              rebox-min-fill-column
-            0))
-     (length ww)
-     (length ee)
-     margin))
+(defun rebox-get-fill-column (ww ee margin title-plist)
+  (max (- (max fill-column
+               (if (and rebox-min-fill-column
+                        (numberp rebox-min-fill-column))
+                   rebox-min-fill-column
+                 0))
+          (length ww)
+          (length ee)
+          margin)
+       (or (plist-get title-plist :max-len)
+           0)))
+
+(defmacro rebox-cache ()
+  '(if (and (boundp 'rebox-cache)
+            (symbol-value 'rebox-cache))
+       rebox-cache
+     (setq rebox-cache (make-hash-table :test 'eq :size 10))))
 
 (defun rebox-save-env ()
   "save some settings"
   (unless rebox-save-env-done
-    (setq rebox-save-env-alist nil)
-    (mapc (lambda (var)
-            (push (cons var (symbol-value var)) rebox-save-env-alist))
-          rebox-save-env-vars)
-    (push (cons 'meta-c-func (lookup-key global-map [(meta c)])) rebox-save-env-alist)
+    (let (env)
+      (mapc (lambda (var)
+              (push (cons var (symbol-value var)) env))
+            rebox-save-env-vars)
+      (puthash :rebox-save-env-alist env (rebox-cache)))
     (setq rebox-save-env-done t)))
 
 (defun rebox-restore-env ()
   "load some settings"
-  (mapc (lambda (var)
-          (set var (cdr (assq var rebox-save-env-alist))))
-        rebox-save-env-vars))
+  (let ((env (gethash :rebox-save-env-alist (rebox-cache))))
+    (mapc (lambda (var)
+            (set var (cdr (assq var env))))
+          rebox-save-env-vars)))
 
 ;;; Initialize the internal structures.
 
