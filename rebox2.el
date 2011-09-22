@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Thu Sep 22 13:44:04 2011 (+0800)
+;; Last-Updated: Thu Sep 22 14:00:54 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 322
+;;     Update #: 324
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -42,7 +42,7 @@
 ;;
 ;;    - `rebox-style-loop'
 ;;    - `rebox-min-fill-column'
-;;    -
+;;    - `rebox-allowance'
 
 
 ;;; Installation:
@@ -627,7 +627,7 @@
   "rebox."
   :group 'convenience)
 
-(defcustom rebox-style-loop '(15 35 33 11)
+(defcustom rebox-style-loop '(15 25 26 11)
   "list of styles for cycling by `rebox-cycle'
 
 It may be tempting to include the no-box style -- 111 in this
@@ -1162,7 +1162,7 @@ If style isn't found return first style."
   ;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
   (let ((fill-func (if fundamental
                        (default-value 'normal-auto-fill-function)
-                     (cdr (assq 'normal-auto-fill-function rebox-save-env-alist)))))
+                     (cdr (assq 'normal-auto-fill-function (gethash :rebox-save-env-alist (rebox-cache)))))))
     (if fill-func
         (funcall fill-func)
       (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
