@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Fri Sep 23 09:38:44 2011 (+0800)
+;; Last-Updated: Fri Sep 23 13:59:31 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 343
+;;     Update #: 346
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1035,15 +1035,8 @@ refilled with it."
                                  (concat "^[ \t]*" (rebox-regexp-quote nw) "\\(.*?\\)[ \t]*\n"))
                                 ((or nw nn ne)
                                  (concat "^[ \t]*" (rebox-regexp-quote nw)
-                                         (if nn
-                                             (concat (regexp-quote (string nn))
-                                                     "*")
-                                           "")
-                                         "\\(.*?\\)"
-                                         (if nn
-                                             (concat (regexp-quote (string nn))
-                                                     "*")
-                                           "")
+                                         "\\(?:.*?\\)"
+                                         (rebox-regexp-ruler nn)
                                          (rebox-regexp-quote ne :lstrip nil) "\n")))
                  regexp3-title (cond
                                 ((or merge-sw
@@ -1052,10 +1045,7 @@ refilled with it."
                                 ((or sw ss se)
                                  (concat "^[ \t]*" (rebox-regexp-quote sw :rstrip nil)
                                          "\\(.*?\\)"
-                                         (if ss
-                                             (concat (regexp-quote (string ss))
-                                                     "*")
-                                           "")
+                                         (rebox-regexp-ruler ss)
                                          (rebox-regexp-quote se :lstrip nil) "\n"))))
            (dolist (k '(style weight
                         regexp1 regexp2 regexp3
@@ -1676,7 +1666,7 @@ With numeric arg, use explicit style.
                              (goto-char (region-end))
                              (eq (point) (point-at-bol))
                            (goto-char orig-m)))
-                    (work (region-beginning) (region-end) 'preserve)
+                    (work (region-beginning) (region-end) 'preserve-region)
                   (let ((r-beg (prog2
                                    (goto-char (region-beginning))
                                    (point-marker)
@@ -1692,8 +1682,8 @@ With numeric arg, use explicit style.
                           (goto-char r-beg))
                       (set-mark r-beg)
                       (goto-char r-end))
-                    (work (region-beginning) (region-end) 'preserve)
-                    (set-marker orig-m (point))))
+                    (work (region-beginning) (region-end) 'preserve-region)
+                    (set-marker orig-m (point-max))))
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (work (point-min) (point-max))))
         ('rebox-invalid-style-error
