@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Fri Sep 23 15:31:36 2011 (+0800)
+;; Last-Updated: Fri Sep 23 15:52:48 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 347
+;;     Update #: 350
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1034,7 +1034,10 @@ refilled with it."
                                 ((and nw (not nn) (not ne))
                                  (concat "^[ \t]*" (rebox-regexp-quote nw) "\\(.*?\\)[ \t]*\n"))
                                 ((or nw nn ne)
-                                 (concat "^[ \t]*" (rebox-regexp-quote nw)
+                                 (concat "^[ \t]*"
+                                         (if nw
+                                             (rebox-regexp-quote nw)
+                                           (rebox-regexp-ruler nn))
                                          "\\(?:.*?\\)"
                                          (rebox-regexp-ruler nn)
                                          (rebox-regexp-quote ne :lstrip nil) "\n")))
@@ -1043,7 +1046,10 @@ refilled with it."
                                      (and sw (not ss) (not se)))
                                  (concat "^[ \t]*" (rebox-regexp-quote sw :lstrip nil) "\n"))
                                 ((or sw ss se)
-                                 (concat "^[ \t]*" (rebox-regexp-quote sw :rstrip nil)
+                                 (concat "^[ \t]*"
+                                         (if sw
+                                             (rebox-regexp-quote sw :rstrip nil)
+                                           (rebox-regexp-ruler ss))
                                          "\\(.*?\\)"
                                          (rebox-regexp-ruler ss)
                                          (rebox-regexp-quote se :lstrip nil) "\n"))))
@@ -2291,10 +2297,12 @@ the empty regexp."
                    (string-equal ne (buffer-substring start (point))))
           (delete-region (point) (- (point) (length ne))))))
     (forward-line 0)
-    (when (and nw-regexp (search-forward-regexp nw-regexp (point-at-eol)))
-        (replace-match (make-string (- (match-end 0) (match-beginning 0))
-                                    ? ))
-        (setq top-title-start (point)))
+    (if (and nw-regexp (search-forward-regexp nw-regexp (point-at-eol)))
+        (progn
+          (replace-match (make-string (- (match-end 0) (match-beginning 0))
+                                      ? ))
+          (setq top-title-start (point)))
+      (setq top-title-start (point)))
     (when nn
       (let ((len (save-excursion
                    (skip-chars-forward (char-to-string nn)))))
@@ -2337,10 +2345,12 @@ the empty regexp."
                    (string-equal se (buffer-substring start (point))))
           (delete-region (point) (- (point) (length se))))))
     (forward-line 0)
-    (when (and sw-regexp (search-forward-regexp sw-regexp (point-at-eol)))
-        (replace-match (make-string (- (match-end 0) (match-beginning 0))
-                                    ? ))
-        (setq bottom-title-start (point)))
+    (if (and sw-regexp (search-forward-regexp sw-regexp (point-at-eol)))
+        (progn
+          (replace-match (make-string (- (match-end 0) (match-beginning 0))
+                                      ? ))
+          (setq bottom-title-start (point)))
+      (setq bottom-title-start (point)))
     (when ss
       (let ((len (save-excursion
                    (skip-chars-forward (char-to-string ss)))))
