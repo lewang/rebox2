@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Thu Sep 22 14:00:54 2011 (+0800)
+;; Last-Updated: Fri Sep 23 09:17:37 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 324
+;;     Update #: 339
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -60,6 +60,7 @@
 ;;     ;; setup rebox for emacs-lisp
 ;;     (add-hook 'emacs-lisp-mode-hook (lambda ()
 ;;                                       (setq (make-local-variable 'rebox-style-loop) '(525 517 521))
+;;                                       (setq (make-local-variable 'rebox-min-fill-column 40))
 ;;                                       (rebox-mode 1)))
 ;;
 ;;    Default `rebox-style-loop' should work for most programming modes, however,
@@ -627,7 +628,22 @@
   "rebox."
   :group 'convenience)
 
-(defcustom rebox-style-loop '(15 25 26 11)
+(defface rebox-style-face
+  '((t (:underline t)))
+  "chevron markers around the selected style"
+  :group 'rebox)
+
+(defface rebox-style-chevron-face
+  '((t (:inherit font-lock-warning-face)))
+  "chevron markers around the selected style"
+  :group 'rebox)
+
+(defface rebox-disabled-style-face
+  '((t (:inherit font-lock-comment-face :strike-through t)))
+  "disabled style face"
+  :group 'rebox)
+
+(defcustom rebox-style-loop '(21 25 27)
   "list of styles for cycling by `rebox-cycle'
 
 It may be tempting to include the no-box style -- 111 in this
@@ -1060,29 +1076,45 @@ refilled with it."
         (t
          (error "unknown style: %s" style))))
 
-(defun rebox-loop-get-style (can-style movement &optional style-loop)
-  "get the next style in style-loop based on movement.
+(defun rebox-loop-get-style (can-style movement &optional style-loop c-start)
+  "Get the next *VALID* style in STYLE-LOOP based on MOVEMENT.
+
+That is, if movement doesn't land a valid style, get the next
+valid style after it.
 
 If style isn't found return first style."
   (setq style-loop (or style-loop
                        rebox-style-loop))
-  (let ((index 0)
-        found
-        new-index)
-    (while (and (not found)
-                (< index (length style-loop)))
-      (if (eq (rebox-get-canonical-style (nth index style-loop))
-              can-style)
-          (setq found t)
-        (incf index)))
-    (setq new-index (+ movement index))
-    (setq new-index (if (or (not found)
-                            (eq index (1- (length style-loop))))
-                        0
-                      (if (< new-index 0)
-                          (1- (length style-loop))
-                        new-index)))
-    (rebox-get-canonical-style (nth new-index style-loop))))
+  (setq c-start (or c-start
+                    comment-start))
+  (let ((l-len (length style-loop))
+        (can-loop (mapcar (lambda (i)
+                            (rebox-get-canonical-style i c-start))
+                          style-loop))
+        res
+        index
+        new-index
+        new-style)
+    (setq index (- l-len (length (memq can-style can-loop))))
+    ;; when it's not found, set it to zero
+    (when (= index l-len)
+      (setq index 0)
+      ;; when you don't start with a valid style, get back to the
+      ;; first style in the list
+      (setq movement 0))
+    (or (dotimes (i l-len)
+          ;; note `%' could result in negative number
+          (setq new-index (% (+ l-len (% (+ index (if (< movement 0)
+                                                      (- movement i)
+                                                    (+ movement i)))
+                                         l-len))
+                             l-len))
+          (setq new-style (rebox-get-canonical-style
+                           (nth new-index can-loop)
+                           c-start))
+          (when (gethash new-style rebox-style-hash)
+            (return new-style)))
+        (signal 'rebox-invalid-style-error (list (format "no valid style found in loop: " style-loop))))))
 
 (defun rebox-make-fill-prefix ()
   "generate fill prefix using adaptive filling methods"
@@ -1472,16 +1504,18 @@ with argument N, move n columns."
 Prefix arg greater than zero inserts arg lines.  Other prefix arg
 causes refilling without actually inserting a newline.
 
-If point is within a box, keep comment boxed.  Elsif point is
-in a comment, continue comment on the next line.  Else, newline
-and indent.
+If point is within a box, insert line in box.  As usual any
+comment is a box.
+
+
+If point is outside a box call function from
+`rebox-newline-indent-function-alist'.
 "
   (interactive "*P")
   (save-restriction
     (let (orig-m
           style
-          text-beg-col
-          )
+          text-beg-col)
       (condition-case err
           (progn
             (setq orig-m (point-marker))
@@ -1552,7 +1586,7 @@ Subsequent invocations cycle though styles defined in
 
 Style may be specified through prefix arg.
 
-If refilling is not desired, see `rebox-cycle'
+If refilling is not desired, use `rebox-cycle'
 "
   (interactive "*P")
   (if (eq last-command this-command)
@@ -1610,15 +1644,14 @@ With numeric arg, use explicit style.
                            (setq style previous-style))
                           ((not style)
                            (setq style (rebox-loop-get-style previous-style movement))))
-                    (if (and refill (or (not style)
-                                        (eq arg 'keep-style)))
+                    (if (and refill
+                             (eq arg 'keep-style))
                         (message "Refilling style %s" previous-style)
-                      (message "Rebox %s style: %s -> %s"
-                               (if refill
-                                   "REFILLING"
-                                 "changing")
-                               previous-style
-                               style))
+                      (message (concat "rebox loop: "
+                                     (rebox-propertize-style-loop style)
+                                     (if refill
+                                         " w/ refill"
+                                       ""))))
                     (rebox-engine :style style
                                   :previous-style previous-style
                                   :refill refill
@@ -2196,9 +2229,11 @@ With no-rstrip specified, don't strip spaces to the right."
 
 ;; -lw-
 ;; when the box is just one character wide:
+
           ;;;;;;;
           ;; a ;;
           ;;;;;;;
+
 ;; if we make the regex 2 characters wide, it won't match.
 
 (defun rebox-regexp-ruler (character)
@@ -2576,6 +2611,28 @@ count trailing spaces or t to always count.
             (symbol-value 'rebox-cache))
        rebox-cache
      (setq rebox-cache (make-hash-table :test 'eq :size 10))))
+
+(defun rebox-propertize-style-loop (can-style &optional loop c-start)
+  (setq loop    (or loop
+                    rebox-style-loop))
+  (setq c-start (or c-start
+                    comment-start))
+  (concat "("
+          (mapconcat
+           (lambda (item)
+             (setq item (rebox-get-canonical-style item c-start))
+             (cond ((eq item can-style)
+                    (concat
+                     (propertize ">" 'face 'rebox-style-chevron-face)
+                     (propertize (format "%s" item) 'face 'rebox-style-face)
+                     (propertize "<" 'face 'rebox-style-chevron-face)))
+                   ((null (gethash item rebox-style-hash))
+                    (propertize (format "%s" item) 'face 'rebox-disabled-style-face))
+                   (t
+                    (format "%s" item))))
+           loop
+           " ")
+          ")"))
 
 (defun rebox-save-env ()
   "save some settings"
