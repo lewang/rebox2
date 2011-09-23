@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Fri Sep 23 09:17:37 2011 (+0800)
+;; Last-Updated: Fri Sep 23 09:38:44 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 339
+;;     Update #: 343
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -590,7 +590,7 @@
 
     (242 248
          "/*           * "
-         " * box123456 * "
+         (" * box123456 * ")
          " *************/")
 
     (243 348
@@ -619,11 +619,6 @@
     normal-auto-fill-function)
   "list of variables overwritten by `rebox-mode' to be saved.")
 
-(defvar rebox-save-env-done nil
-  "prevent rebox from overwriting saved values")
-(make-variable-buffer-local 'rebox-save-env-done)
-(put 'rebox-save-env-done 'permanent-local t)
-
 (defgroup rebox nil
   "rebox."
   :group 'convenience)
@@ -646,15 +641,23 @@
 (defcustom rebox-style-loop '(21 25 27)
   "list of styles for cycling by `rebox-cycle'
 
-It may be tempting to include the no-box style -- 111 in this
-list, but if you do, cycling through styles without an
-active-region will break because rebox can't figure out a region
-to act on.
+* In the future there may be a better way to try out box styles,
+  but for now, you will have to look at the header of the source
+  file to find the styles you like.
 
-It's preferrable to have a boxing style that's undo-able by your
-major-mode's comment handling, like 11 or 21.  That way, when you
-need to remove comment marks, you can cycle to such a style and
-use `uncomment-region'.
+* Two or three digit styles are premissible in this list.  If
+  using three digit style, be sure to make a buffer-local version
+  of this variable. (see docs)
+
+* It may be tempting to include the no-box style -- 111 in this
+  list, but if you do, cycling through styles without an
+  active-region will break because rebox can't figure out a
+  region to act on.
+
+  It's preferrable to have a boxing style that's undo-able by your
+  major-mode's comment handling, like 11 or 21.  That way, when
+  you need to remove comment marks, you can cycle to such a style
+  and use `uncomment-region'.
 
 "
   :type '(repeat number)
@@ -673,13 +676,18 @@ be present in the top border.
 
 If `bottom-title' is present then ditto for bottom.
 
-Both would look like:
+ * Both would look like:
 
     *={ hi }======*
     | a b c  asdf |
     *====={ bye }=*
 
-For a partial-width bottom border, a title is never allowed."
+ * For a partial-width bottom border, a bottom title is never allowed.
+
+ * The top and bottom titles are preserved while traversing the
+   style-loop.  However if you settle on a style without borders,
+   they will be discarded.
+"
   :type '(repeat symbol)
   :group 'rebox)
 
@@ -2636,13 +2644,13 @@ count trailing spaces or t to always count.
 
 (defun rebox-save-env ()
   "save some settings"
-  (unless rebox-save-env-done
+  (unless (gethash :rebox-save-env-done (rebox-cache))
     (let (env)
       (mapc (lambda (var)
               (push (cons var (symbol-value var)) env))
             rebox-save-env-vars)
       (puthash :rebox-save-env-alist env (rebox-cache)))
-    (setq rebox-save-env-done t)))
+    (puthash :rebox-save-env-done t (rebox-cache))))
 
 (defun rebox-restore-env ()
   "load some settings"
