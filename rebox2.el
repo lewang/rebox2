@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Fri Sep 23 13:59:31 2011 (+0800)
+;; Last-Updated: Fri Sep 23 15:31:36 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 346
+;;     Update #: 347
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -590,7 +590,7 @@
 
     (242 248
          "/*           * "
-         (" * box123456 * ")
+         " * box123456 * "
          " *************/")
 
     (243 348
