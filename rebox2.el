@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sat Sep 24 10:18:27 2011 (+0800)
+;; Last-Updated: Sat Sep 24 16:26:58 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 360
+;;     Update #: 364
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1450,7 +1450,7 @@ else call the default binding of M-c.
 
 with argument N, move n columns."
   (interactive "*")
-  (let ((orig-func (lookup-key [(meta c)] (current-global-map))))
+  (let ((orig-func (lookup-key (current-global-map) [(meta c)])))
     (rebox-left-border-wrapper (lambda ()
                                  (if (< (current-column) unindent-count)
                                      (center-region (point-min) (point-max))
@@ -2393,9 +2393,9 @@ the empty regexp."
           (replace-match (make-string (- (match-end 0) (match-beginning 0))
                                       ? )))
       (forward-line 1))
-    (setq max-title-len )
-    (list :top-title top-title :bottom-title bottom-title :max-len (max (length top-title)
-                                                                        (length bottom-title)))))
+    (setq max-title-len (max (length top-title)
+                             (length bottom-title)))
+    (list :top-title top-title :bottom-title bottom-title :max-len max-title-len)))
 
 ;; -lw- here
 (defun rebox-build (refill margin style-h marked-point move-point title-plist)
@@ -2418,6 +2418,8 @@ box STYLE."
          right-margin
          count-trailing-spaces
          limit-m
+         temp
+         temp-mod
          )
 
     (setq limit-m (point-max-marker))
@@ -2466,15 +2468,13 @@ box STYLE."
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     (when (and nn
                (>= (+ (length top-title) (length nw)) right-margin))
-      (setq top-title (concat top-title (vector nn))))
+      (setq top-title (concat top-title (vector nn))
+            temp-mod t))
     (when (and ss
                (>= (+ (length bottom-title) (length sw)) right-margin))
-      (setq bottom-title (concat bottom-title (vector ss))))
-    (when (or (and (not (zerop (length top-title)))
-                   (eq nn (aref top-title (1- (length top-title)))))
-              (and (not (zerop (length bottom-title)))
-                   (eq ss (aref bottom-title (1- (length bottom-title))))))
-      (incf right-margin))
+      (setq bottom-title (concat bottom-title (vector ss))
+            temp-mod t))
+    (when temp-mod (incf right-margin))
 
     ;; Construct the top line.
     (goto-char (point-min))
@@ -2489,7 +2489,7 @@ box STYLE."
              (insert nw))
            (when (or nn ne)
              (string-match "\\`\\([ \t]*\\)" top-title)
-             (insert (replace-match (make-string (length (match-string 0 top-title))
+             (insert (replace-match (make-string (- (match-end 0) (match-beginning 0))
                                                  (or nn ? ))
                               nil
                               t
@@ -2517,7 +2517,8 @@ box STYLE."
         (insert sw))
       (when (or ss se)
         (string-match "\\`\\([ \t]*\\)" bottom-title)
-        (insert (replace-match (make-string (length (match-string 0 bottom-title)) (or ss ? ))
+        (insert (replace-match (make-string (- (match-end 0) (match-beginning 0))
+                                            (or ss ? ))
                                nil
                                t
                                bottom-title))
@@ -2541,7 +2542,6 @@ box STYLE."
                          (- point-max-line 1)))
              (min-col (+ margin (length ww)))
              (max-col right-margin)
-             temp
              )
         ;; move vertically
         (cond ((< my-line min-line)
@@ -2604,7 +2604,7 @@ count trailing spaces or t to always count.
     (while (not (eobp))
       (if (and pad-sentence-end
                (re-search-forward (concat (sentence-end)
-                                          "[ \t]*$") (point-at-eol) t))
+                                          "$") (point-at-eol) t))
           (setq margin (max margin (+ (current-column)
                                       (if sentence-end-double-space
                                           2
