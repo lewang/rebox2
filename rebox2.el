@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Fri Sep 23 15:52:48 2011 (+0800)
+;; Last-Updated: Sat Sep 24 09:39:55 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 350
+;;     Update #: 357
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -668,6 +668,11 @@
 Boxes that start at column0 will be at least this many columns wide.
 
 nil means boxes resize according to text."
+  :group 'rebox)
+
+(defcustom rebox-pad-sentence-end nil
+  "When this is t, and refilling, if end-of-line is also the end of a sentence, then pad it with
+`sentence-end-double-space' number of spaces."
   :group 'rebox)
 
 (defcustom rebox-allowances '(top-title bottom-title)
@@ -1535,7 +1540,8 @@ If point is outside a box call function from
                                         (> arg 0))
                                    arg)
                                   (t
-                                   nil)))
+                                   (signal (format "arg %s not supported by `rebox-indent-new-line'"
+                                                   arg)))))
                   (rebox-engine :previous-style style
                                 :refill nil
                                 :mod-func
@@ -2297,12 +2303,10 @@ the empty regexp."
                    (string-equal ne (buffer-substring start (point))))
           (delete-region (point) (- (point) (length ne))))))
     (forward-line 0)
-    (if (and nw-regexp (search-forward-regexp nw-regexp (point-at-eol)))
-        (progn
-          (replace-match (make-string (- (match-end 0) (match-beginning 0))
-                                      ? ))
-          (setq top-title-start (point)))
-      (setq top-title-start (point)))
+    (when (and nw-regexp (search-forward-regexp nw-regexp (point-at-eol)))
+      (replace-match (make-string (- (match-end 0) (match-beginning 0))
+                                  ? )))
+    (setq top-title-start (point))
     (when nn
       (let ((len (save-excursion
                    (skip-chars-forward (char-to-string nn)))))
@@ -2345,12 +2349,10 @@ the empty regexp."
                    (string-equal se (buffer-substring start (point))))
           (delete-region (point) (- (point) (length se))))))
     (forward-line 0)
-    (if (and sw-regexp (search-forward-regexp sw-regexp (point-at-eol)))
-        (progn
-          (replace-match (make-string (- (match-end 0) (match-beginning 0))
-                                      ? ))
-          (setq bottom-title-start (point)))
-      (setq bottom-title-start (point)))
+    (when (and sw-regexp (search-forward-regexp sw-regexp (point-at-eol)))
+      (replace-match (make-string (- (match-end 0) (match-beginning 0))
+                                  ? )))
+    (setq bottom-title-start (point))
     (when ss
       (let ((len (save-excursion
                    (skip-chars-forward (char-to-string ss)))))
@@ -2431,6 +2433,9 @@ box STYLE."
                                            fill-paragraph-function
                                          nil))
               (fill-column (rebox-get-fill-column ww ee margin title-plist))
+              ;; since we are filling as "text" we don't want any programming
+              ;; definitions of sentence-end to exist.
+              (sentence-end nil)
               ;; some filling functions will consult major-mode for filling
               ;; advice, we don't want this since we've removed the
               ;; comment-starts.
@@ -2444,7 +2449,8 @@ box STYLE."
             (setq count-trailing-spaces nil)
             (fill-region (point-min) limit-m)))
       (setq count-trailing-spaces marked-point))
-    (setq right-margin (max (+ (max (rebox-right-margin :count-trailing-spaces count-trailing-spaces)
+    (setq right-margin (max (+ (max (rebox-right-margin :count-trailing-spaces count-trailing-spaces
+                                                        :pad-sentence-end rebox-pad-sentence-end)
                                     title-max-len)
                                (length ww)
                                margin)
@@ -2564,7 +2570,7 @@ all lines are empty."
     margin))
 
 
-(defun* rebox-right-margin (&key (count-trailing-spaces t))
+(defun* rebox-right-margin (&key (count-trailing-spaces t) pad-sentence-end)
   "Return the maximum value of the right margin of all lines.
 
 COUNT-TRAILING-SPACES may be a marker, in which case only spaces
@@ -2580,10 +2586,17 @@ count trailing spaces or t to always count.
       (setq count-trailing-spaces nil))
     (goto-char (point-min))
     (while (not (eobp))
-      (end-of-line)
-      (unless count-trailing-spaces
-        (skip-chars-backward " \t"))
-      (setq margin (max margin (current-column)))
+      (if (and pad-sentence-end
+               (re-search-forward (concat (sentence-end)
+                                          "[ \t]*$") (point-at-eol) t))
+          (setq margin (max margin (+ (current-column)
+                                      (if sentence-end-double-space
+                                          2
+                                        1))))
+        (end-of-line)
+        (unless count-trailing-spaces
+          (skip-chars-backward " \t"))
+        (setq margin (max margin (current-column))))
       (forward-line 1))
     (unless count-trailing-spaces
       ;; we iterate through lines twice to avoid excess damage to markers
