@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sat Sep 24 16:26:58 2011 (+0800)
+;; Last-Updated: Sat Sep 24 18:03:39 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 364
+;;     Update #: 372
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1665,7 +1665,9 @@ With numeric arg, use explicit style.
                     (rebox-engine :style style
                                   :previous-style previous-style
                                   :refill refill
-                                  :quiet t)
+                                  :quiet t
+                                  :move-point t
+                                  :marked-point orig-m)
                     (when preserve-region
                       (set-mark temp-mark)
                       (setq deactivate-mark nil))))
@@ -1929,10 +1931,11 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
 
       ;; Remove all previous comment marks.
       (unless (eq previous-style 111)
+        (goto-char marked-point)
         (setq title-plist (rebox-unbuild prev-h)))
 
       ;; don't lose title when we are traversing style loop
-      (if (memq last-command '(rebox-cycle rebox-dwim))
+      (if (memq last-command '(rebox-cycle rebox-dwim rebox-refill))
           (setq title-plist (gethash :title-plist (rebox-cache)))
         (puthash :title-plist title-plist (rebox-cache)))
 
@@ -2292,7 +2295,23 @@ the empty regexp."
          top-title-start
          bottom-title-start
          max-title-len
+         point-in-border
          limit-m)
+    (cond ((and (or nw nn ne)
+                (= (line-number-at-pos) 1))
+           (setq point-in-border (cons
+                                 'top
+                                 (max (- (current-column) (length nw))
+                                      0))))
+          ((and (or sw ss se)
+                (= (line-number-at-pos) (save-excursion
+                                          (goto-char (point-max))
+                                          (forward-line -1)
+                                          (line-number-at-pos))))
+           (setq point-in-border (cons
+                                 'bottom
+                                 (max (- (current-column) (length sw))
+                                      0)))))
     ;; Clean up first line.
     (goto-char (point-min))
     (end-of-line)
@@ -2395,7 +2414,9 @@ the empty regexp."
       (forward-line 1))
     (setq max-title-len (max (length top-title)
                              (length bottom-title)))
-    (list :top-title top-title :bottom-title bottom-title :max-len max-title-len)))
+    (list :top-title top-title :bottom-title bottom-title
+          :max-len max-title-len
+          :point-in-border point-in-border)))
 
 ;; -lw- here
 (defun rebox-build (refill margin style-h marked-point move-point title-plist)
@@ -2415,6 +2436,7 @@ box STYLE."
          (top-title (or (plist-get title-plist :top-title) ""))
          (bottom-title (or (plist-get title-plist :bottom-title) ""))
          (title-max-len (or (plist-get title-plist :max-len) 0))
+         (point-in-border (plist-get title-plist :point-in-border))
          right-margin
          count-trailing-spaces
          limit-m
@@ -2467,11 +2489,15 @@ box STYLE."
     ;; else we won't be able to recognize the box with regexp[13]-title    ;;
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     (when (and nn
-               (>= (+ (length top-title) (length nw)) right-margin))
+               (>= (+ (length top-title)
+                      (length nw)
+                      margin) right-margin))
       (setq top-title (concat top-title (vector nn))
             temp-mod t))
     (when (and ss
-               (>= (+ (length bottom-title) (length sw)) right-margin))
+               (>= (+ (length bottom-title)
+                      (length sw)
+                      margin) right-margin))
       (setq bottom-title (concat bottom-title (vector ss))
             temp-mod t))
     (when temp-mod (incf right-margin))
@@ -2530,45 +2556,58 @@ box STYLE."
 
     (goto-char marked-point)
     (when move-point
-      ;; figure out if we've moved the marked-point to an unreasonable position
-      (let* ((my-col (current-column))
-             (my-line (line-number-at-pos))
-             (point-max-line (line-number-at-pos (point-max)))
-             (min-line (if (or merge-nw nw nn ne)
-                           2
-                         1))
-             (max-line (if (or merge-sw sw ss se)
-                           (- point-max-line 2)
-                         (- point-max-line 1)))
-             (min-col (+ margin (length ww)))
-             (max-col right-margin)
-             )
-        ;; move vertically
-        (cond ((< my-line min-line)
-               (forward-line 1))
-              ((> my-line max-line)
-               (goto-char (point-min))
-               (forward-line (1- max-line))))
-        ;; move horizontally
-        (cond ((< my-col min-col)
-               (beginning-of-line)
-               (forward-char min-col)
-               (setq temp (skip-chars-forward " \t"))
-               ;; nothing but space on this line
-               (when (looking-at-p (concat (regexp-quote (if ee
-                                                             (rebox-lstrip ee)
-                                                           ""))
-                                           "[ \t]*$"))
-                 (backward-char temp)))
-              ((> my-col max-col)
-               (goto-char (+ (point-at-bol) max-col))
-               (setq temp (skip-chars-backward " \t"))
-               (when (< (current-column) min-col)
-                 (beginning-of-line)
-                 (forward-char min-col)))))
+      (cond ((eq (car point-in-border) 'top)
+             (goto-char (point-min))
+             (move-to-column (+ (cdr point-in-border)
+                                (length nw))))
+            ((eq (car point-in-border) 'bottom)
+             (goto-char (point-max))
+             (forward-line -1)
+             (if (or sw ss se)
+                 (progn
+                   (move-to-column (+ (cdr point-in-border)
+                                      (length sw))))
+               (move-to-column right-margin)
+               (skip-chars-backward " \t")))
+            (t
+             ;; figure out if we've moved the marked-point to an unreasonable position
+             (let* ((my-col (current-column))
+                    (my-line (line-number-at-pos))
+                    (point-max-line (line-number-at-pos (point-max)))
+                    (min-line (if (or merge-nw nw nn ne)
+                                  2
+                                1))
+                    (max-line (if (or merge-sw sw ss se)
+                                  (- point-max-line 2)
+                                (- point-max-line 1)))
+                    (min-col (+ margin (length ww)))
+                    (max-col right-margin)
+                    )
+               ;; move vertically
+               (cond ((< my-line min-line)
+                      (forward-line 1))
+                     ((> my-line max-line)
+                      (goto-char (point-min))
+                      (forward-line (1- max-line))))
+               ;; move horizontally
+               (cond ((< my-col min-col)
+                      (beginning-of-line)
+                      (forward-char min-col)
+                      (setq temp (skip-chars-forward " \t"))
+                      ;; nothing but space on this line
+                      (when (looking-at-p (concat (regexp-quote (if ee
+                                                                    (rebox-lstrip ee)
+                                                                  ""))
+                                                  "[ \t]*$"))
+                        (backward-char temp)))
+                     ((> my-col max-col)
+                      (goto-char (+ (point-at-bol) max-col))
+                      (setq temp (skip-chars-backward " \t"))
+                      (when (< (current-column) min-col)
+                        (beginning-of-line)
+                        (forward-char min-col)))))))
       (unless (= (point) marked-point)
-        (set-marker marked-point (point))))
-    ))
+        (set-marker marked-point (point))))))
 
 
 (defun rebox-left-margin ()
