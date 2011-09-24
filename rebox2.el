@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Sep 25 00:50:56 2011 (+0800)
+;; Last-Updated: Sun Sep 25 02:09:46 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 377
+;;     Update #: 378
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1624,7 +1624,6 @@ With numeric arg, use explicit style.
   (interactive "*P")
   (let ((orig-m (point-marker))
         ;;copy of mark, so we can possibly change the insertion type
-        temp-mark
         style
         movement
         previous-style)
@@ -1642,35 +1641,34 @@ With numeric arg, use explicit style.
     (save-restriction
       (condition-case err
           (flet ((work (r-beg r-end &optional preserve-region)
-                    (when preserve-region
-                      (setq temp-mark (set-marker (make-marker) (mark)))
-                      (set-marker-insertion-type (if (< temp-mark orig-m)
-                                                     orig-m
-                                                   temp-mark)
-                                                 t))
-                    (narrow-to-region r-beg r-end)
-                    (setq previous-style (rebox-guess-style))
-                    (cond ((eq arg 'keep-style)
-                           (setq style previous-style))
-                          ((not style)
-                           (setq style (rebox-loop-get-style previous-style movement))))
-                    (if (and refill
-                             (eq arg 'keep-style))
-                        (message "Refilling style %s" previous-style)
-                      (message (concat "rebox loop: "
-                                     (rebox-propertize-style-loop style)
-                                     (if refill
-                                         " w/ refill"
-                                       ""))))
-                    (rebox-engine :style style
-                                  :previous-style previous-style
-                                  :refill refill
-                                  :quiet t
-                                  :move-point t
-                                  :marked-point orig-m)
-                    (when preserve-region
-                      (set-mark temp-mark)
-                      (setq deactivate-mark nil))))
+                       (narrow-to-region r-beg r-end)
+                       (setq previous-style (rebox-guess-style))
+                       (cond ((eq arg 'keep-style)
+                              (setq style previous-style))
+                             ((not style)
+                              (setq style (rebox-loop-get-style previous-style movement))))
+                       (if (and refill
+                                (eq arg 'keep-style))
+                           (message "Refilling style %s" previous-style)
+                         (message (concat "rebox loop: "
+                                          (rebox-propertize-style-loop style)
+                                          (if refill
+                                              " w/ refill"
+                                            ""))))
+                       (rebox-engine :style style
+                                     :previous-style previous-style
+                                     :refill refill
+                                     :quiet t
+                                     :move-point (not preserve-region)
+                                     :marked-point orig-m)
+                       (when preserve-region
+                         (if (< (point) (mark))
+                             (progn
+                               (set-mark (point-max))
+                               (set-marker orig-m (point-min)))
+                           (set-mark (point-min))
+                           (set-marker orig-m (point-max)))
+                         (setq deactivate-mark nil))))
             (if (use-region-p)
                 (if (and (prog2
                              (goto-char (region-beginning))
@@ -1698,8 +1696,8 @@ With numeric arg, use explicit style.
                       (goto-char r-end))
                     (work (region-beginning) (region-end) 'preserve-region)
                     (set-marker orig-m (point-max))))
-            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-            (work (point-min) (point-max))))
+              (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+              (work (point-min) (point-max))))
         ('rebox-invalid-style-error
          (error "%s" err))
         ('rebox-error
