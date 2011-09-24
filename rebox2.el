@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sat Sep 24 21:56:44 2011 (+0800)
+;; Last-Updated: Sun Sep 25 00:50:56 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 376
+;;     Update #: 377
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2025,10 +2025,6 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
               (setq cursor (cdr cursor))
             (rplacd cursor (cdr (cdr cursor)))))))))
 
-
-(defun rebox-style-to-vector (number)
-  "Transform a style number into a vector triplet."
-  (vector (/ number 100) (% (/ number 10) 10) (% number 10)))
 
 ;; Classification of boxes (and also, construction data).
 
