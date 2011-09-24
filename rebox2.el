@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sat Sep 24 18:03:39 2011 (+0800)
+;; Last-Updated: Sat Sep 24 21:09:42 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 372
+;;     Update #: 373
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2644,10 +2644,13 @@ count trailing spaces or t to always count.
       (if (and pad-sentence-end
                (re-search-forward (concat (sentence-end)
                                           "$") (point-at-eol) t))
-          (setq margin (max margin (+ (current-column)
-                                      (if sentence-end-double-space
-                                          2
-                                        1))))
+          (progn
+            (skip-chars-backward " \t")
+            (setq margin (max margin
+                              (+ (current-column)
+                                 (if sentence-end-double-space
+                                     2
+                                   1)))))
         (end-of-line)
         (unless count-trailing-spaces
           (skip-chars-backward " \t"))
