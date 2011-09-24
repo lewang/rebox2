@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sat Sep 24 21:09:42 2011 (+0800)
+;; Last-Updated: Sat Sep 24 21:56:44 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 373
+;;     Update #: 376
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2633,7 +2633,11 @@ on that line, up to that marker will be counted.  nil to never
 count trailing spaces or t to always count.
 
 "
-  (let ((margin 0))
+  (let ((margin 0)
+        (sentence-pad-count (if sentence-end-double-space
+                                2
+                              1))
+        sentence-end-found)
     (when (markerp count-trailing-spaces)
       (when (progn (goto-char count-trailing-spaces)
                    (looking-at "[ \t]*$"))
@@ -2644,17 +2648,18 @@ count trailing spaces or t to always count.
       (if (and pad-sentence-end
                (re-search-forward (concat (sentence-end)
                                           "$") (point-at-eol) t))
-          (progn
-            (skip-chars-backward " \t")
-            (setq margin (max margin
-                              (+ (current-column)
-                                 (if sentence-end-double-space
-                                     2
-                                   1)))))
+          (setq sentence-end-found t)
         (end-of-line)
-        (unless count-trailing-spaces
-          (skip-chars-backward " \t"))
-        (setq margin (max margin (current-column))))
+        (setq sentence-end-found nil))
+      (unless count-trailing-spaces
+        (skip-chars-backward " \t"))
+      (setq margin (max margin
+                        (+ (current-column)
+                           (if sentence-end-found
+                               (max
+                                (- sentence-pad-count (skip-chars-forward " "))
+                                0)
+                             0))))
       (forward-line 1))
     (unless count-trailing-spaces
       ;; we iterate through lines twice to avoid excess damage to markers
@@ -2662,7 +2667,7 @@ count trailing spaces or t to always count.
       (while (not (eobp))
         (end-of-line)
         (when (> (current-column) margin)
-          (delete-char (- margin (current-column))))
+          (delete-char (- margin (current-column)))).
         (forward-line 1)))
     margin))
 
