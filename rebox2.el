@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sat Sep 24 09:39:55 2011 (+0800)
+;; Last-Updated: Sat Sep 24 10:18:27 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 357
+;;     Update #: 360
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2460,6 +2460,22 @@ box STYLE."
                                      (numberp rebox-min-fill-column))
                                 (- rebox-min-fill-column (length ee))
                               0)))
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;; we need to append ";" to a title that's propping up the box size or ;;
+    ;; else we won't be able to recognize the box with regexp[13]-title    ;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (when (and nn
+               (>= (+ (length top-title) (length nw)) right-margin))
+      (setq top-title (concat top-title (vector nn))))
+    (when (and ss
+               (>= (+ (length bottom-title) (length sw)) right-margin))
+      (setq bottom-title (concat bottom-title (vector ss))))
+    (when (or (and (not (zerop (length top-title)))
+                   (eq nn (aref top-title (1- (length top-title)))))
+              (and (not (zerop (length bottom-title)))
+                   (eq ss (aref bottom-title (1- (length bottom-title))))))
+      (incf right-margin))
+
     ;; Construct the top line.
     (goto-char (point-min))
     (cond (merge-nw
