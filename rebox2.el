@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Sep 25 02:09:46 2011 (+0800)
+;; Last-Updated: Sun Sep 25 04:18:16 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 378
+;;     Update #: 386
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -779,6 +779,12 @@ boxing should recognize paragraphs as well as comment blocks.
 "
   :type 'list
   :group 'rebox)
+
+(defmacro rebox-cache ()
+  '(if (and (boundp 'rebox-cache)
+            (symbol-value 'rebox-cache))
+       rebox-cache
+     (setq rebox-cache (make-hash-table :test 'eq :size 10))))
 
 ;;;###autoload
 (define-minor-mode rebox-mode
@@ -2661,7 +2667,7 @@ count trailing spaces or t to always count.
       (while (not (eobp))
         (end-of-line)
         (when (> (current-column) margin)
-          (delete-char (- margin (current-column)))).
+          (delete-char (- margin (current-column))))
         (forward-line 1)))
     margin))
 
@@ -2683,12 +2689,6 @@ count trailing spaces or t to always count.
           margin)
        (or (plist-get title-plist :max-len)
            0)))
-
-(defmacro rebox-cache ()
-  '(if (and (boundp 'rebox-cache)
-            (symbol-value 'rebox-cache))
-       rebox-cache
-     (setq rebox-cache (make-hash-table :test 'eq :size 10))))
 
 (defun rebox-propertize-style-loop (can-style &optional loop c-start)
   (setq loop    (or loop
