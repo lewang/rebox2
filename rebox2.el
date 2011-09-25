@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Sep 25 04:18:16 2011 (+0800)
+;; Last-Updated: Sun Sep 25 17:50:30 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 386
+;;     Update #: 390
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1169,35 +1169,40 @@ If style isn't found return first style."
         (save-restriction
           (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
           (setq style (rebox-guess-style))
-          (if (= style 111)
-              (signal 'rebox-error nil)
-            (goto-char orig-m)
-            (rebox-engine :previous-style style
-                          :marked-point orig-m
-                          :refill 'auto-fill
-                          :quiet t
-                          :move-point nil
-                          :before-insp-func
-                          (lambda ()
-                            (goto-char marked-point)
-                            ;; top or bottom or left or right border
-                            (when (or (and previous-regexp1
-                                           (eq (line-number-at-pos) 1))
-                                      (and previous-regexp3
-                                           (eq (line-number-at-pos) (1- (line-number-at-pos (point-max)))))
-                                      (< (current-column) unindent-count)
-                                      (and previous-ee
-                                           (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
-                                           (looking-at-p "[ \t]*$")))
-                              (throw 'rebox-engine-done t)))
-                          :after-insp-func
-                          (lambda ()
-                            ;; pressing space at boundary - changing style from 520 to 521
-                            ;; moves point to bol, we need to move it back.
-                            (when (and (eq this-command 'rebox-space)
-                                       (bolp))
-                              (rebox-beginning-of-line nil)
-                              (setq marked-point (point)))))))
+          (goto-char orig-m)
+          (cond ((= style 111)
+                 (signal 'rebox-error nil))
+                ((and (memq (% style 10) '(0 1))
+                      (> style 300))
+                 (let ((comment-style 'indent))
+                   (rebox-call-alternate-fill-function 'prog)))
+                (t
+                 (rebox-engine :previous-style style
+                               :marked-point orig-m
+                               :refill 'auto-fill
+                               :quiet t
+                               :move-point nil
+                               :before-insp-func
+                               (lambda ()
+                                 (goto-char marked-point)
+                                 ;; top or bottom or left or right border
+                                 (when (or (and previous-regexp1
+                                                (eq (line-number-at-pos) 1))
+                                           (and previous-regexp3
+                                                (eq (line-number-at-pos) (1- (line-number-at-pos (point-max)))))
+                                           (< (current-column) unindent-count)
+                                           (and previous-ee
+                                                (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
+                                                (looking-at-p "[ \t]*$")))
+                                   (throw 'rebox-engine-done t)))
+                               :after-insp-func
+                               (lambda ()
+                                 ;; pressing space at boundary - changing style from 520 to 521
+                                 ;; moves point to bol, we need to move it back.
+                                 (when (and (eq this-command 'rebox-space)
+                                            (bolp))
+                                   (rebox-beginning-of-line nil)
+                                   (setq marked-point (point))))))))
       ('rebox-error
        (goto-char orig-m)
        (rebox-call-alternate-fill-function))
@@ -1205,11 +1210,16 @@ If style isn't found return first style."
        (error "rebox-do-auto-fill wrapper: %s" err)))))
 
 
-(defun rebox-call-alternate-fill-function (&optional fundamental)
-  ;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
-  (let ((fill-func (if fundamental
-                       (default-value 'normal-auto-fill-function)
-                     (cdr (assq 'normal-auto-fill-function (gethash :rebox-save-env-alist (rebox-cache)))))))
+(defun rebox-call-alternate-fill-function (&optional mode)
+  (let ((fill-func (cond (;; we always enable auto-fill so we call `normal-auto-fill-function' directly.
+                          (eq mode 'fundamental)
+                          (default-value 'normal-auto-fill-function))
+                         ((eq mode 'prog)
+                          (cdr (assq 'normal-auto-fill-function
+                                     (gethash :rebox-save-env-alist (rebox-cache)))))
+                         (t
+                          (cdr (assq 'normal-auto-fill-function
+                                     (gethash :rebox-save-env-alist (rebox-cache))))))))
     (if fill-func
         (funcall fill-func)
       (signal 'rebox-error '("appropriate auto-fill-function not found.")))))
