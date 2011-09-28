@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Sep 25 17:50:30 2011 (+0800)
+;; Last-Updated: Mon Sep 26 23:00:54 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 390
+;;     Update #: 393
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1172,8 +1172,7 @@ If style isn't found return first style."
           (goto-char orig-m)
           (cond ((= style 111)
                  (signal 'rebox-error nil))
-                ((and (memq (% style 10) '(0 1))
-                      (> style 300))
+                ((rebox-is-regular-comment style)
                  (let ((comment-style 'indent))
                    (rebox-call-alternate-fill-function 'prog)))
                 (t
@@ -1426,11 +1425,11 @@ With universal ARG, always call `rebox-yank-function'.
                            rebox-yank-function))
 
 (defun rebox-yank-pop (arg)
-  "If point is in a box, unbox first, and then run `reobx-yank-pop-function' as requested.
+  "If point is in a box, unbox first, and then run `rebox-yank-pop-function' as requested.
 
-If point is not in a box, call `reobx-yank-pop-function'.
+If point is not in a box, call `rebox-yank-pop-function'.
 
-With universal ARG, always call `reobx-yank-pop-function'.
+With universal ARG, always call `rebox-yank-pop-function'.
 "
   (interactive "P*")
   (rebox-kill-yank-wrapper :not-at-nw t
@@ -1547,7 +1546,8 @@ If point is outside a box call function from
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
             (set-marker-insertion-type orig-m t)
             (setq style (rebox-guess-style))
-            (if (not (eq style 111)) ; 111 is no-box
+            (if (not (or (= style 111)
+                         (rebox-is-regular-comment style)))
                 (progn
                   (setq arg (cond ((not arg)
                                    1)
@@ -1585,8 +1585,9 @@ If point is outside a box call function from
                                     (newline arg))))
                   (goto-char orig-m)
                   (move-to-column text-beg-col t))
-              (goto-char orig-m)
-              (call-interactively (rebox-get-newline-indent-function))))
+              (let ((comment-style 'indent))
+                (goto-char orig-m)
+                (call-interactively (rebox-get-newline-indent-function)))))
         ('rebox-error
          (let ((err-marker (point-marker))
                (saved-func (rebox-get-newline-indent-function)))
@@ -2738,6 +2739,10 @@ count trailing spaces or t to always count.
     (mapc (lambda (var)
             (set var (cdr (assq var env))))
           rebox-save-env-vars)))
+
+(defsubst rebox-is-regular-comment (style)
+  (and (memq (% style 10) '(0 1))
+       (> style 300)))
 
 ;;; Initialize the internal structures.
 
