@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Mon Sep 26 23:00:54 2011 (+0800)
+;; Last-Updated: Thu Sep 29 23:56:32 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 393
+;;     Update #: 394
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1359,7 +1359,7 @@ If point is not in a box, call `rebox-kill-line-function'.
 With universal ARG, always call `rebox-kill-line-function'.
 "
   (interactive "P*")
-  (if (and arg (listp arg))
+  (if (consp arg)
       (funcall rebox-kill-line-function 1)
     (let (orig-col orig-line)
       (rebox-kill-yank-wrapper :before-insp-func
@@ -1644,8 +1644,7 @@ With numeric arg, use explicit style.
         style
         movement
         previous-style)
-    (cond ((and arg
-                (listp arg))
+    (cond ((consp arg)
            (setq movement -1))
           ((null arg)
            (setq movement 1))
