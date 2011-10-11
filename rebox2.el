@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Thu Sep 29 23:56:32 2011 (+0800)
+;; Last-Updated: Mon Oct  3 01:08:40 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 394
+;;     Update #: 395
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1292,7 +1292,7 @@ ARG argument is prefix argument, only used by 'rebox-beginning-of-line-function'
   "If point is in a box, go to end of text on first invocation.
 On second invocation, go to end of physical line.  Subsequent invocation switches between the two.
 
-If point is not in a box, call `rebox-beginning-of-line-function'"
+If point is not in a box, call `rebox-end-of-line-function'"
   (interactive "^P")
   (let ((orig-m (point-marker))
         previous-style
