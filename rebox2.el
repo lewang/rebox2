@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Mon Oct  3 01:08:40 2011 (+0800)
+;; Last-Updated: Tue Oct 25 20:30:57 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 395
+;;     Update #: 396
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1504,9 +1504,7 @@ else call `rebox-backspace-function'.
 
 with argument N, move n columns."
   (interactive "*p")
-  (if (use-region-p)
-      (call-interactively 'rebox-kill-line)
-    (rebox-left-border-wrapper (lambda ()
+  (rebox-left-border-wrapper (lambda ()
                                  (if (< orig-col unindent-count)
                                      (delete-rectangle (point-min)
                                                        (progn (goto-char (point-max))
@@ -1519,7 +1517,7 @@ with argument N, move n columns."
                                    (goto-char orig-m)
                                    (call-interactively rebox-backspace-function))
                                  (throw 'rebox-engine-done t))
-                               rebox-backspace-function)))
+                               rebox-backspace-function))
 
 ;;;###autoload
 (defun rebox-indent-new-line (arg)
