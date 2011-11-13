@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Tue Oct 25 20:30:57 2011 (+0800)
+;; Last-Updated: Sun Nov 13 22:10:29 2011 (+0800)
 ;;           By: Le Wang
-;;     Update #: 396
+;;     Update #: 397
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1777,7 +1777,8 @@ With numeric arg, use explicit style.
        (puthash :last-style nil (rebox-cache))
        (goto-char orig-m)
        (and orig-func
-            (call-interactively orig-func)))
+            (let (current-prefix-arg)
+              (call-interactively orig-func))))
       ('error
        (signal (car err) (cdr err))))))
 
