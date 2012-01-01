@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Nov 13 22:10:29 2011 (+0800)
+;; Last-Updated: Sun Jan  1 19:03:03 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 397
+;;     Update #: 408
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -645,7 +645,7 @@
   but for now, you will have to look at the header of the source
   file to find the styles you like.
 
-* Two or three digit styles are premissible in this list.  If
+* Two or three digit styles are permissible in this list.  If
   using three digit style, be sure to make a buffer-local version
   of this variable. (see docs)
 
@@ -1228,15 +1228,6 @@ If style isn't found return first style."
 
 ;;;###autoload
 (defun rebox-beginning-of-line (arg)
-  "If point is in a box, go to beginning of text on first invocation.
-On second invocation, go to beginning of physical line.  Subsequent invocation switches between the two.
-
-If point is not in a box, call `rebox-beginning-of-line-function'
-
-ARG argument is prefix argument, only used by 'rebox-beginning-of-line-function'
-
-"
-
   (interactive "^P")
   (let ((orig-m (point-marker))
         previous-style
@@ -1283,16 +1274,17 @@ ARG argument is prefix argument, only used by 'rebox-beginning-of-line-function'
                 (move-beginning-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (call-interactively rebox-beginning-of-line-function))
+         (call-interactively (rebox-get-fallback 'rebox-beginning-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
+(put 'rebox-kill-ring-save 'function-documentation
+     '(concat
+       "Rebox behaviour: go to beginning of actual text.\n\n"
+       (rebox-document-binding 'rebox-beginning-of-line-function)))
+
 
 ;;;###autoload
 (defun rebox-end-of-line (arg)
-  "If point is in a box, go to end of text on first invocation.
-On second invocation, go to end of physical line.  Subsequent invocation switches between the two.
-
-If point is not in a box, call `rebox-end-of-line-function'"
   (interactive "^P")
   (let ((orig-m (point-marker))
         previous-style
@@ -1344,23 +1336,19 @@ If point is not in a box, call `rebox-end-of-line-function'"
                 (move-end-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (call-interactively rebox-end-of-line-function))
+         (call-interactively (rebox-get-fallback 'rebox-end-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
+(put 'rebox-kill-ring-save 'function-documentation
+     '(concat
+       "Rebox behaviour: go to end of actual text.\n\n"
+       (rebox-document-binding 'rebox-end-of-line-function)))
 
 ;;;###autoload
 (defun rebox-kill-line (arg)
-  "If point is in a box, unbox first, and then run
-`rebox-kill-line-function' as requested, unless region is
-selected, in which case, the region is killed.
-
-If point is not in a box, call `rebox-kill-line-function'.
-
-With universal ARG, always call `rebox-kill-line-function'.
-"
   (interactive "P*")
   (if (consp arg)
-      (funcall rebox-kill-line-function 1)
+      (funcall (rebox-get-fallback 'rebox-kill-line-function) 1)
     (let (orig-col orig-line)
       (rebox-kill-yank-wrapper :before-insp-func
                                (lambda ()
@@ -1382,7 +1370,7 @@ With universal ARG, always call `rebox-kill-line-function'.
                                              ;; ensure narrowed region is still valid
                                              (unless (bolp)
                                                (insert "\n")))
-                                         (call-interactively rebox-kill-line-function)))
+                                         (call-interactively (rebox-get-fallback 'rebox-kill-line-function))))
                                    ('end-of-buffer
                                     (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
                                                              ,@(cdr err))))))
@@ -1405,15 +1393,14 @@ With universal ARG, always call `rebox-kill-line-function'.
                                      (rebox-beginning-of-line 1))
                                    (set-marker marked-point (point))))
                                :orig-func
-                               rebox-kill-line-function))))
+                               (rebox-get-fallback 'rebox-kill-line-function)))))
+(put 'rebox-kill-ring-save 'function-documentation
+     '(concat
+       "Rebox behaviour: kill content without box.  With universal arg, always
+call fallback.\n\n"
+       (rebox-document-binding 'rebox-kill-line-function)))
 
 (defun rebox-yank (arg)
-  "If point is in a box, unbox first, and then run `rebox-yank-function' as requested.
-
-If point is not in a box, call `rebox-yank-function'.
-
-With universal ARG, always call `rebox-yank-function'.
-"
   (interactive "P*")
   (rebox-kill-yank-wrapper :not-at-nw t
                            :mod-func
@@ -1422,15 +1409,14 @@ With universal ARG, always call `rebox-yank-function'.
                              (call-interactively 'yank)
                              (set-marker orig-m (point)))
                            :orig-func
-                           rebox-yank-function))
+                           (rebox-get-fallback 'rebox-yank-function)))
+(put 'rebox-kill-ring-save 'function-documentation
+     '(concat
+       "Rebox behaviour: yank content into box.  With universal ARG, always
+call fallback.\n\n"
+       (rebox-document-binding 'rebox-yank-function)))
 
 (defun rebox-yank-pop (arg)
-  "If point is in a box, unbox first, and then run `rebox-yank-pop-function' as requested.
-
-If point is not in a box, call `rebox-yank-pop-function'.
-
-With universal ARG, always call `rebox-yank-pop-function'.
-"
   (interactive "P*")
   (rebox-kill-yank-wrapper :not-at-nw t
                            :mod-func
@@ -1439,7 +1425,12 @@ With universal ARG, always call `rebox-yank-pop-function'.
                              (call-interactively 'yank-pop)
                              (set-marker orig-m (point)))
                            :orig-func
-                           rebox-yank-pop-function))
+                           (rebox-get-fallback 'rebox-yank-pop-function)))
+(put 'rebox-kill-ring-save 'function-documentation
+     '(concat
+       "Rebox behaviour: yank-pop without box.  With universal arg,
+always call fallback.\n\n"
+       (rebox-document-binding 'rebox-yank-pop-function)))
 
 (defun rebox-kill-ring-save (arg)
   (interactive "P")
@@ -1455,32 +1446,30 @@ With universal ARG, always call `rebox-yank-pop-function'.
                                (call-interactively rebox-kill-ring-save-function)
                                (set-marker orig-m (point-marker)))
                              :orig-func
-                             rebox-kill-ring-save-function)
+                             (rebox-get-fallback 'rebox-kill-ring-save-function))
     ;; kill-ring-save shouldn't change buffer-modified status
     (set-buffer-modified-p mod-p)))
+(put 'rebox-kill-ring-save 'function-documentation
+     '(concat
+       "Rebox behaviour: save content without box.  With universal arg, always call fallback.\n\n"
+       (rebox-document-binding 'rebox-kill-ring-save-function)))
 
 (defun rebox-center ()
-  "If point is in the left border of a box, center the box,
-else call the default binding of M-c.
-
-with argument N, move n columns."
   (interactive "*")
-  (let ((orig-func (lookup-key (current-global-map) [(meta c)])))
-    (rebox-left-border-wrapper (lambda ()
-                                 (if (< (current-column) unindent-count)
-                                     (center-region (point-min) (point-max))
-                                   (when orig-func
-                                     (call-interactively orig-func)
-                                     (set-marker orig-m (point))))
-                                 (throw 'rebox-engine-done t))
-                               orig-func)))
-
+  (rebox-left-border-wrapper (lambda ()
+                               (if (< (current-column) unindent-count)
+                                   (center-region (point-min) (point-max))
+                                 (when orig-func
+                                   (call-interactively orig-func)
+                                   (set-marker orig-m (point))))
+                               (throw 'rebox-engine-done t))
+                             (rebox-get-fallback)))
+(put 'rebox-center 'function-documentation
+     '(concat
+       "Rebox behaviour: center box.\n\n"
+       (rebox-document-binding)))
 
 (defun rebox-space (n)
-  "If point is in the left border of a box, move box to the right,
-else calls `rebox-space-function'.
-
-with argument N, move n columns."
   (interactive "p*")
   (rebox-left-border-wrapper (lambda ()
                                (goto-char orig-m)
@@ -1496,13 +1485,14 @@ with argument N, move n columns."
                                  ;; this is the last column of the box
                                  (set-marker orig-m (point)))
                                (throw 'rebox-engine-done t))
-                             rebox-space-function))
+                             (rebox-get-fallback 'rebox-space-function)))
+(put 'rebox-space 'function-documentation
+     '(concat
+       "Rebox behaviour: if point is in the left border of a box, move box to the
+ right.  With argument N, move n columns.\n\n"
+       (rebox-document-binding 'rebox-space-function)))
 
 (defun rebox-backspace (n)
-  "If point is in the left border of a box, move box to the left,
-else call `rebox-backspace-function'.
-
-with argument N, move n columns."
   (interactive "*p")
   (rebox-left-border-wrapper (lambda ()
                                  (if (< orig-col unindent-count)
@@ -1517,7 +1507,12 @@ with argument N, move n columns."
                                    (goto-char orig-m)
                                    (call-interactively rebox-backspace-function))
                                  (throw 'rebox-engine-done t))
-                               rebox-backspace-function))
+                               (rebox-get-fallback 'rebox-backspace-function)))
+ (put 'rebox-backspace 'function-documentation
+     '(concat
+       "Rebox behaviour: in the left border of a box, move box to the left.
+With argument N, move n columns.\n\n"
+       (rebox-document-binding 'rebox-backspace-function)))
 
 ;;;###autoload
 (defun rebox-indent-new-line (arg)
@@ -2279,8 +2274,29 @@ the empty regexp."
   (while (and (> (length string) 0)
               (memq (aref string 0) '(?  ?\t)))
     (setq string (substring string 1)))
-  string
-  )
+  string)
+
+(defun rebox-get-fallback (&optional saved-function)
+  "return fallback function found"
+  (if rebox-mode
+      (let* ((rebox-mode nil)
+             (command (key-binding (this-single-command-keys))))
+        command)
+    (eval saved-function)))
+
+(defun rebox-document-binding (&optional saved-function)
+  (concat
+   "Works by scheduling rebox behaviour when invoked in
+a box context.  Call the fallback command"
+   (when (eq this-command 'describe-key)
+     (let ((fallback (rebox-get-fallback)))
+       (when fallback
+         (if (eq fallback (eval saved-function))
+          (format ", which in this case is \"%s\" defined by `%s'"
+             (eval saved-function)
+             saved-function)
+         (format ", which in this case is `%s'" (rebox-get-fallback))))))
+   "."))
 
 
 ;; Reconstruction of boxes.
