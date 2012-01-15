@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Wed Jan 11 19:57:28 2012 (+0800)
+;; Last-Updated: Sun Jan 15 22:35:56 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 412
+;;     Update #: 414
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -834,11 +834,16 @@ header.
         (auto-fill-mode 1)
         (when (featurep 'yasnippet)
           (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t)
-          (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t)))
+          (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))
+        (when (featurep 'iedit)
+          (add-hook 'iedit-mode-hook 'turn-off-rebox nil t)
+          (add-hook 'iedit-mode-end-hook 'turn-on-rebox nil t)))
     (rebox-restore-env)
     (when (called-interactively-p 'any)
       (remove-hook 'yas/before-expand-snippet-hook 'turn-off-rebox t)
-      (remove-hook 'yas/after-exit-snippet-hook 'turn-on-rebox t))))
+      (remove-hook 'yas/after-exit-snippet-hook 'turn-on-rebox t)
+      (remove-hook 'iedit-mode-hook 'turn-off-rebox t)
+      (remove-hook 'iedit-mode-end-hook 'turn-on-rebox t))))
 
 (defun turn-on-rebox ()
   (rebox-mode 1))
