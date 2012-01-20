@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Jan 15 22:35:56 2012 (+0800)
+;; Last-Updated: Sun Jan 22 14:17:51 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 414
+;;     Update #: 418
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1353,7 +1353,9 @@ If style isn't found return first style."
 (defun rebox-kill-line (arg)
   (interactive "P*")
   (if (consp arg)
-      (funcall (rebox-get-fallback 'rebox-kill-line-function) 1)
+      (if (equal arg '(4))
+          (funcall (rebox-get-fallback 'rebox-kill-line-function) 1)
+        (funcall (rebox-get-fallback 'rebox-kill-line-function) (list (/ (car arg) 4))))
     (let (orig-col orig-line)
       (rebox-kill-yank-wrapper :before-insp-func
                                (lambda ()
@@ -1399,10 +1401,10 @@ If style isn't found return first style."
                                    (set-marker marked-point (point))))
                                :orig-func
                                (rebox-get-fallback 'rebox-kill-line-function)))))
-(put 'rebox-kill-ring-save 'function-documentation
+(put 'rebox-kill-line 'function-documentation
      '(concat
        "Rebox behaviour: kill content without box.  With universal arg, always
-call fallback.\n\n"
+call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
        (rebox-document-binding 'rebox-kill-line-function)))
 
 (defun rebox-yank (arg)
