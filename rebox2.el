@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Thu Feb 23 22:44:34 2012 (+0800)
+;; Last-Updated: Thu Feb 23 23:09:17 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 420
+;;     Update #: 421
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1576,10 +1576,15 @@ If point is outside a box call function from
                                     (newline arg))))
                   (goto-char orig-m)
                   (move-to-column text-beg-col t))
-              (let ((comment-style 'indent))
+              (let ((comment-style 'indent)
+                    column-start)
                 (widen)
                 (goto-char orig-m)
-                (call-interactively (rebox-get-newline-indent-function)))))
+                (comment-beginning)
+                (setq column-start (current-column))
+                (goto-char orig-m)
+                (call-interactively (rebox-get-newline-indent-function))
+                (indent-to-column column-start))))
         ('rebox-error
          (let ((err-marker (point-marker))
                (saved-func (rebox-get-newline-indent-function)))
