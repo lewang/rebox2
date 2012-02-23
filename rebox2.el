@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Jan 29 02:32:16 2012 (+0800)
+;; Last-Updated: Thu Feb 23 22:44:34 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 419
+;;     Update #: 420
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -737,15 +737,6 @@ lines in the body of box."
   :type 'symbol
   :group 'rebox)
 
-(defcustom rebox-beginning-of-line-function 'move-beginning-of-line
-  "function called by `rebox-beginning-of-line' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-end-of-line-function 'move-end-of-line
-  "function called by `rebox-end-of-line' when no box is found."
-  :type 'symbol
-  :group 'rebox)
 
 (defcustom rebox-yank-function 'yank
   "function called by `rebox-yank' when no box is found."
