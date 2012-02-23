@@ -59,8 +59,8 @@
 ;;
 ;;     ;; setup rebox for emacs-lisp
 ;;     (add-hook 'emacs-lisp-mode-hook (lambda ()
-;;                                       (setq (make-local-variable 'rebox-style-loop) '(525 517 521))
-;;                                       (setq (make-local-variable 'rebox-min-fill-column 40))
+;;                                       (set (make-local-variable 'rebox-style-loop) '(525 517 521))
+;;                                       (set (make-local-variable 'rebox-min-fill-column) 40)
 ;;                                       (rebox-mode 1)))
 ;;
 ;;    Default `rebox-style-loop' should work for most programming modes, however,
