@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Mon Feb 27 20:55:24 2012 (+0800)
+;; Last-Updated: Mon Feb 27 20:57:58 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 423
+;;     Update #: 424
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1411,7 +1411,9 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
 (put 'rebox-kill-ring-save 'function-documentation
      '(concat
        "Rebox behaviour: yank content into box.  With universal ARG, always
-call fallback.\n\n"
+call fallback.
+
+To pass universal ARG to fall-back function, use C-u C-u."
        (rebox-document-binding 'rebox-yank-function)))
 
 (defun rebox-yank-pop (arg)
