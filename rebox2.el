@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Thu Feb 23 23:09:17 2012 (+0800)
+;; Last-Updated: Mon Feb 27 20:55:24 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 421
+;;     Update #: 423
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1730,8 +1730,7 @@ With numeric arg, use explicit style.
         previous-style)
     (condition-case err
         (progn
-          (when (or (and current-prefix-arg
-                         (listp current-prefix-arg))
+          (when (or (consp current-prefix-arg)
                     buffer-read-only)
             ;; call orig-func
             (signal 'rebox-error nil))
@@ -1776,7 +1775,8 @@ With numeric arg, use explicit style.
        (puthash :last-style nil (rebox-cache))
        (goto-char orig-m)
        (and orig-func
-            (let (current-prefix-arg)
+            (let ((current-prefix-arg (when (consp current-prefix-arg)
+                                       (list (/ (car current-prefix-arg) 4)))))
               (call-interactively orig-func))))
       ('error
        (signal (car err) (cdr err))))))
