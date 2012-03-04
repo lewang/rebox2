@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Mon Feb 27 20:57:58 2012 (+0800)
+;; Last-Updated: Sun Mar  4 09:54:46 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 424
+;;     Update #: 426
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1273,7 +1273,7 @@ If style isn't found return first style."
          (call-interactively (rebox-get-fallback 'rebox-beginning-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
-(put 'rebox-kill-ring-save 'function-documentation
+(put 'rebox-beginning-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to beginning of actual text.\n\n"
        (rebox-document-binding 'rebox-beginning-of-line-function)))
@@ -1335,7 +1335,7 @@ If style isn't found return first style."
          (call-interactively (rebox-get-fallback 'rebox-end-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
-(put 'rebox-kill-ring-save 'function-documentation
+(put 'rebox-end-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to end of actual text.\n\n"
        (rebox-document-binding 'rebox-end-of-line-function)))
@@ -1408,7 +1408,7 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
                              (set-marker orig-m (point)))
                            :orig-func
                            (rebox-get-fallback 'rebox-yank-function)))
-(put 'rebox-kill-ring-save 'function-documentation
+(put 'rebox-yank 'function-documentation
      '(concat
        "Rebox behaviour: yank content into box.  With universal ARG, always
 call fallback.
@@ -1426,7 +1426,7 @@ To pass universal ARG to fall-back function, use C-u C-u."
                              (set-marker orig-m (point)))
                            :orig-func
                            (rebox-get-fallback 'rebox-yank-pop-function)))
-(put 'rebox-kill-ring-save 'function-documentation
+(put 'rebox-yank-pop 'function-documentation
      '(concat
        "Rebox behaviour: yank-pop without box.  With universal arg,
 always call fallback.\n\n"
