@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Sun Mar  4 09:54:46 2012 (+0800)
+;; Last-Updated: Thu Mar  8 00:11:33 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 426
+;;     Update #: 427
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -823,10 +823,10 @@ header.
         (make-local-variable 'normal-auto-fill-function)
         (setq normal-auto-fill-function 'rebox-do-auto-fill)
         (auto-fill-mode 1)
-        (when (featurep 'yasnippet)
+        (when (fboundp 'yas/minor-mode)
           (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t)
           (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))
-        (when (featurep 'iedit)
+        (when (fboundp 'iedit-mode)
           (add-hook 'iedit-mode-hook 'turn-off-rebox nil t)
           (add-hook 'iedit-mode-end-hook 'turn-on-rebox nil t)))
     (rebox-restore-env)
