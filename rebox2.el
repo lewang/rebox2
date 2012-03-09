@@ -11,10 +11,10 @@
 ;; François Pinard <pinard@iro.umontreal.ca>, April 1991.
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
-;; Version: 0.6
-;; Last-Updated: Sat Mar 10 01:03:32 2012 (+0800)
+;; Version: 0.7
+;; Last-Updated: Sat Mar 10 01:46:35 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 428
+;;     Update #: 429
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
