@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.6
-;; Last-Updated: Thu Mar  8 00:11:33 2012 (+0800)
+;; Last-Updated: Sat Mar 10 01:03:32 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 427
+;;     Update #: 428
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1338,7 +1338,7 @@ If style isn't found return first style."
 (put 'rebox-end-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to end of actual text.\n\n"
-       (rebox-document-binding 'rebox-end-of-line-function)))
+       (rebox-document-binding)))
 
 ;;;###autoload
 (defun rebox-kill-line (arg)
