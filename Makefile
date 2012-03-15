@@ -34,9 +34,9 @@ CP = install -m 644
 ##----------------------------------------------------------------------
 
 # The following variables need to be defined by the maintainer
-LISPF      = 	rebox2.el	 	\
+LISPFILES   = 	rebox2.el	 	\
 
-ELCFILES    = $(LISPF:.el=.elc)
+ELCFILES    = $(LISPFILES:.el=.elc)
 
 default: $(ELCFILES)
 
