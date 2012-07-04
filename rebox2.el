@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Jun 24 20:08:34 2012 (+0800)
+;; Last-Updated: Thu Jul  5 00:17:57 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 430
+;;     Update #: 435
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -737,17 +737,6 @@ lines in the body of box."
   :type 'symbol
   :group 'rebox)
 
-
-(defcustom rebox-yank-function 'yank
-  "function called by `rebox-yank' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
-(defcustom rebox-yank-pop-function 'yank-pop
-  "function called by `rebox-yank-pop' when no box is found."
-  :type 'symbol
-  :group 'rebox)
-
 (defcustom rebox-newline-indent-function-alist
   '((c-mode   . c-indent-new-comment-line)
     (c++-mode . c-indent-new-comment-line)
@@ -1400,14 +1389,15 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
 
 (defun rebox-yank (arg)
   (interactive "P*")
-  (rebox-kill-yank-wrapper :not-at-nw t
-                           :mod-func
-                           (lambda ()
-                             (goto-char orig-m)
-                             (call-interactively 'yank)
-                             (set-marker orig-m (point)))
-                           :orig-func
-                           (rebox-get-fallback 'rebox-yank-function)))
+  (let ((fallback (call-interactively 'yank)))
+    (rebox-kill-yank-wrapper :not-at-nw t
+                             :mod-func
+                             (lambda ()
+                               (goto-char orig-m)
+                               fallback
+                               (set-marker orig-m (point)))
+                             :orig-func
+                             fallback)))
 (put 'rebox-yank 'function-documentation
      '(concat
        "Rebox behaviour: yank content into box.  With universal ARG, always
@@ -1418,14 +1408,15 @@ To pass universal ARG to fall-back function, use C-u C-u."
 
 (defun rebox-yank-pop (arg)
   (interactive "P*")
-  (rebox-kill-yank-wrapper :not-at-nw t
-                           :mod-func
-                           (lambda ()
-                             (goto-char orig-m)
-                             (call-interactively 'yank-pop)
-                             (set-marker orig-m (point)))
-                           :orig-func
-                           (rebox-get-fallback 'rebox-yank-pop-function)))
+  (let ((fallback ))
+    (rebox-kill-yank-wrapper :not-at-nw t
+                             :mod-func
+                             (lambda ()
+                               (goto-char orig-m)
+                               (call-interactively fallback)
+                               (set-marker orig-m (point)))
+                             :orig-func
+                             fallback)))
 (put 'rebox-yank-pop 'function-documentation
      '(concat
        "Rebox behaviour: yank-pop without box.  With universal arg,
@@ -1743,11 +1734,11 @@ With numeric arg, use explicit style.
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments
                                    :try-whole-box try-whole-box)
             (when (and
+                   not-at-nw
                    (progn
                      (goto-char (point-min))
                      (skip-syntax-forward " " orig-m)
-                     (= (point) orig-m))
-                       not-at-nw)
+                     (= (point) orig-m)))
               (signal 'rebox-error '("mark is out of box")))
             (when (and (= orig-m (point-max))
                        (progn
