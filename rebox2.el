@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Thu Jul  5 00:17:57 2012 (+0800)
+;; Last-Updated: Mon Jul  9 23:00:46 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 435
+;;     Update #: 436
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2290,7 +2290,7 @@ the empty regexp."
 
 (defun rebox-document-binding (&optional saved-function)
   (concat
-   "Works by scheduling rebox behaviour when invoked in
+   "Works by performing reboxed behaviour when invoked in
 a box context.  Call the fallback command"
    (when (eq this-command 'describe-key)
      (let ((fallback (rebox-get-fallback)))
