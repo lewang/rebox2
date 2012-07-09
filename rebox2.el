@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Mon Jul  9 23:00:46 2012 (+0800)
+;; Last-Updated: Mon Jul  9 23:04:40 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 436
+;;     Update #: 437
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -737,6 +737,17 @@ lines in the body of box."
   :type 'symbol
   :group 'rebox)
 
+
+(defcustom rebox-yank-function 'yank
+  "function called by `rebox-yank' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-yank-pop-function 'yank-pop
+  "function called by `rebox-yank-pop' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
 (defcustom rebox-newline-indent-function-alist
   '((c-mode   . c-indent-new-comment-line)
     (c++-mode . c-indent-new-comment-line)
@@ -1252,7 +1263,7 @@ If style isn't found return first style."
                                           (+ (length (rebox-make-fill-prefix))
                                              unindent-count)))))
                               (throw 'rebox-engine-done t)))
-	      (goto-char orig-m)
+              (goto-char orig-m)
               (if (or (bolp)
                       (> (current-column) boxed-line-start-col))
                   (move-to-column boxed-line-start-col)
@@ -1389,15 +1400,14 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
 
 (defun rebox-yank (arg)
   (interactive "P*")
-  (let ((fallback (call-interactively 'yank)))
-    (rebox-kill-yank-wrapper :not-at-nw t
-                             :mod-func
-                             (lambda ()
-                               (goto-char orig-m)
-                               fallback
-                               (set-marker orig-m (point)))
-                             :orig-func
-                             fallback)))
+  (rebox-kill-yank-wrapper :not-at-nw t
+                           :mod-func
+                           (lambda ()
+                             (goto-char orig-m)
+                             (call-interactively 'yank)
+                             (set-marker orig-m (point)))
+                           :orig-func
+                           (rebox-get-fallback 'rebox-yank-function)))
 (put 'rebox-yank 'function-documentation
      '(concat
        "Rebox behaviour: yank content into box.  With universal ARG, always
@@ -1408,15 +1418,14 @@ To pass universal ARG to fall-back function, use C-u C-u."
 
 (defun rebox-yank-pop (arg)
   (interactive "P*")
-  (let ((fallback ))
-    (rebox-kill-yank-wrapper :not-at-nw t
-                             :mod-func
-                             (lambda ()
-                               (goto-char orig-m)
-                               (call-interactively fallback)
-                               (set-marker orig-m (point)))
-                             :orig-func
-                             fallback)))
+  (rebox-kill-yank-wrapper :not-at-nw t
+                           :mod-func
+                           (lambda ()
+                             (goto-char orig-m)
+                             (call-interactively 'yank-pop)
+                             (set-marker orig-m (point)))
+                           :orig-func
+                           (rebox-get-fallback 'rebox-yank-pop-function)))
 (put 'rebox-yank-pop 'function-documentation
      '(concat
        "Rebox behaviour: yank-pop without box.  With universal arg,
@@ -1734,11 +1743,11 @@ With numeric arg, use explicit style.
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments
                                    :try-whole-box try-whole-box)
             (when (and
-                   not-at-nw
                    (progn
                      (goto-char (point-min))
                      (skip-syntax-forward " " orig-m)
-                     (= (point) orig-m)))
+                     (= (point) orig-m))
+                       not-at-nw)
               (signal 'rebox-error '("mark is out of box")))
             (when (and (= orig-m (point-max))
                        (progn
@@ -2005,9 +2014,9 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
         (let ((marked-col (progn
                             ;; bug # 7946 workaround
                             ;; should be fixed in next emacs23 release after 23.2.1
-			    (set-buffer (current-buffer))
+                            (set-buffer (current-buffer))
                             (format "%s" marked-point)
-			    (goto-char marked-point)
+                            (goto-char marked-point)
                             (current-column))))
           (goto-char (point-min))
           (while (re-search-forward "^[ \t][ \t]+" nil t)
