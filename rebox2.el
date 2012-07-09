@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Mon Jul  9 23:04:40 2012 (+0800)
+;; Last-Updated: Mon Jul  9 23:16:02 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 437
+;;     Update #: 438
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1404,7 +1404,7 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
                            :mod-func
                            (lambda ()
                              (goto-char orig-m)
-                             (call-interactively 'yank)
+                             (call-interactively (rebox-get-fallback 'rebox-yank-function))
                              (set-marker orig-m (point)))
                            :orig-func
                            (rebox-get-fallback 'rebox-yank-function)))
@@ -1422,7 +1422,7 @@ To pass universal ARG to fall-back function, use C-u C-u."
                            :mod-func
                            (lambda ()
                              (goto-char orig-m)
-                             (call-interactively 'yank-pop)
+                             (call-interactively (rebox-get-fallback 'rebox-yank-pop-function))
                              (set-marker orig-m (point)))
                            :orig-func
                            (rebox-get-fallback 'rebox-yank-pop-function)))
@@ -1743,11 +1743,11 @@ With numeric arg, use explicit style.
             (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments
                                    :try-whole-box try-whole-box)
             (when (and
+                   not-at-nw
                    (progn
                      (goto-char (point-min))
                      (skip-syntax-forward " " orig-m)
-                     (= (point) orig-m))
-                       not-at-nw)
+                     (= (point) orig-m)))
               (signal 'rebox-error '("mark is out of box")))
             (when (and (= orig-m (point-max))
                        (progn
@@ -1782,7 +1782,7 @@ With numeric arg, use explicit style.
        (goto-char orig-m)
        (and orig-func
             (let ((current-prefix-arg (when (consp current-prefix-arg)
-                                       (list (/ (car current-prefix-arg) 4)))))
+                                        (list (/ (car current-prefix-arg) 4)))))
               (call-interactively orig-func))))
       ('error
        (signal (car err) (cdr err))))))
