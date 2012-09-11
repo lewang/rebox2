@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Tue Sep 11 23:05:41 2012 (+0800)
+;; Last-Updated: Tue Sep 11 23:08:05 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 442
+;;     Update #: 443
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -776,6 +776,10 @@ boxing should recognize paragraphs as well as comment blocks.
             (symbol-value 'rebox-cache))
        rebox-cache
      (setq rebox-cache (make-hash-table :test 'eq :size 10))))
+
+(defsubst rebox-is-regular-comment (style)
+  (and (memq (% style 10) '(0 1))
+       (> style 300)))
 
 ;;;###autoload
 (define-minor-mode rebox-mode
@@ -2777,10 +2781,6 @@ count trailing spaces or t to always count.
     (mapc (lambda (var)
             (set var (cdr (assq var env))))
           rebox-save-env-vars)))
-
-(defsubst rebox-is-regular-comment (style)
-  (and (memq (% style 10) '(0 1))
-       (> style 300)))
 
 ;;; Initialize the internal structures.
 
