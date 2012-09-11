@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Mon Jul  9 23:16:02 2012 (+0800)
+;; Last-Updated: Tue Sep 11 23:05:41 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 438
+;;     Update #: 442
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1021,11 +1021,22 @@ refilled with it."
                                    (rebox-regexp-quote ne :lstrip nil) "\n")))
                  regexp2 (and (not (string-equal (rebox-rstrip (concat ww ee))
                                                  ""))
-                              (concat "^[ \t]*"
-                                      (rebox-regexp-quote ww :rstrip nil)
-                                      ".*"
-                                      (rebox-regexp-quote ee :lstrip nil)
-                                      "\n"))
+                              (if ee
+                                  (concat "^[ \t]*"
+                                          (rebox-regexp-quote ww :rstrip nil)
+                                          ".*"
+                                          (rebox-regexp-quote ee :lstrip nil)
+                                          "\n")
+                                ;; allow lines with trimmed whitespace at EOL
+                                ;; to still match
+                                (concat "^[ \t]*"
+                                        "\\(?:"
+                                        (rebox-regexp-quote ww :rstrip nil)
+                                        ".*"
+                                        "\\|"
+                                        (rebox-regexp-quote ww)
+                                        "\\)"
+                                        "\n")))
                  regexp3 (cond
                           ((or merge-sw
                                (and sw (not ss) (not se)))
