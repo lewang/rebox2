@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Tue Sep 11 23:08:05 2012 (+0800)
+;; Last-Updated: Tue Sep 11 23:12:12 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 443
+;;     Update #: 447
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -273,6 +273,7 @@
   (defvar curr-ww)
   (defvar previous-regexp1)
   (defvar curr-regexp1)
+  (defvar orig-func)
   )
 
 
@@ -1140,7 +1141,7 @@ If style isn't found return first style."
                            c-start))
           (when (gethash new-style rebox-style-hash)
             (return new-style)))
-        (signal 'rebox-invalid-style-error (list (format "no valid style found in loop: " style-loop))))))
+        (signal 'rebox-invalid-style-error (list (format "no valid style found in loop: %s" style-loop))))))
 
 (defun rebox-make-fill-prefix ()
   "generate fill prefix using adaptive filling methods"
@@ -1564,8 +1565,8 @@ If point is outside a box call function from
                                         (> arg 0))
                                    arg)
                                   (t
-                                   (signal (format "arg %s not supported by `rebox-indent-new-line'"
-                                                   arg)))))
+                                   (signal 'error (format "arg %s not supported by `rebox-indent-new-line'"
+                                                          arg)))))
                   (rebox-engine :previous-style style
                                 :refill nil
                                 :mod-func
@@ -2030,7 +2031,6 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
                             ;; bug # 7946 workaround
                             ;; should be fixed in next emacs23 release after 23.2.1
                             (set-buffer (current-buffer))
-                            (format "%s" marked-point)
                             (goto-char marked-point)
                             (current-column))))
           (goto-char (point-min))
