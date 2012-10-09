@@ -828,6 +828,9 @@ header.
         (make-local-variable 'normal-auto-fill-function)
         (setq normal-auto-fill-function 'rebox-do-auto-fill)
         (auto-fill-mode 1)
+        ;; we call non-autoloaded functions from newcomment, so this is needed
+        (when comment-start
+          (comment-normalize-vars))
         (when (fboundp 'yas/minor-mode)
           (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t)
           (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))
