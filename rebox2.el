@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Tue Sep 11 23:12:12 2012 (+0800)
+;; Last-Updated: Tue Oct  9 22:31:05 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 447
+;;     Update #: 452
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -2368,6 +2368,15 @@ a box context.  Call the fallback command"
                                  'bottom
                                  (max (- (current-column) (length sw))
                                       0)))))
+    ;; When there is no right border, on an empty line, left border's trailing
+    ;; spaces may be be trimmed.  People don't like empty spaces at EOL.
+    (when (and ww-regexp
+               (not ee))
+      (string-match "\\`\\(.*?\\)\\(\\s-*\\)\\'" ww-regexp)
+      (setq ww-regexp (concat (match-string 1 ww-regexp)
+                              "\\(?:"
+                              (match-string 2 ww-regexp)
+                              "\\)?")))
     ;; Clean up first line.
     (goto-char (point-min))
     (end-of-line)
