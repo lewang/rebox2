@@ -812,9 +812,7 @@ header.
             ([(meta y)] . rebox-yank-pop)
             ([(meta c)] . rebox-center)
             (" " . rebox-space)
-            ([(backspace)] . rebox-backspace)
-
-            )
+            ("" . rebox-backspace))
   :group 'rebox
   (if rebox-mode
       (progn
