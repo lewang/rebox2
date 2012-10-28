@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Tue Oct  9 22:31:05 2012 (+0800)
+;; Last-Updated: Sun Oct 28 10:41:17 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 452
+;;     Update #: 455
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1355,7 +1355,7 @@ If style isn't found return first style."
 (put 'rebox-end-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to end of actual text.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-end-of-line-function)))
 
 ;;;###autoload
 (defun rebox-kill-line (arg)
@@ -2309,7 +2309,7 @@ the empty regexp."
              (command (key-binding (this-single-command-keys))))
         (when (and (equal (this-single-command-keys) [backspace])
                    (null command))
-          (setq command (key-binding "\d")))
+          (setq command (key-binding (kbd "DEL"))))
         command)
     (eval saved-function)))
 
