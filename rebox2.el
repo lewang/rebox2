@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Oct 28 10:49:53 2012 (+0800)
+;; Last-Updated: Sun Oct 28 15:03:39 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 456
+;;     Update #: 459
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -741,6 +741,16 @@ lines in the body of box."
 
 (defcustom rebox-yank-function 'yank
   "function called by `rebox-yank' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-end-of-line-function 'move-end-of-line
+  "function called by `rebox-end-of-line' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-beginning-of-line-function 'move-beginning-of-line
+  "function called by `rebox-beginning-of-line' when no box is found."
   :type 'symbol
   :group 'rebox)
 
@@ -2316,8 +2326,9 @@ the empty regexp."
   "return fallback function found"
   (if rebox-mode
       (let* ((rebox-mode nil)
-             (command (key-binding (this-single-command-keys))))
-        (when (and (equal (this-single-command-keys) [backspace])
+             (key (this-single-command-keys))
+             (command (key-binding key)))
+        (when (and (equal key [backspace])
                    (null command))
           (setq command (key-binding (kbd "DEL"))))
         command)
