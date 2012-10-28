@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Oct 28 02:34:35 2012 (+0800)
+;; Last-Updated: Tue Oct  9 22:31:05 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 457
+;;     Update #: 452
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -710,6 +710,45 @@ lines in the body of box."
   :type 'string
   :group 'rebox)
 
+(defcustom rebox-newline-indent-function-default 'comment-indent-new-line
+  "function called by `rebox-indent-new-line' no box is found."
+  :group 'rebox)
+
+(defvar rebox-newline-indent-function nil
+  "cached function for this buffer.")
+(make-variable-buffer-local 'rebox-newline-indent-function)
+
+(defcustom rebox-backspace-function 'backward-delete-char-untabify
+  "function called by `rebox-backpace' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-space-function 'self-insert-command
+  "function called by `rebox-space' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-kill-line-function 'kill-line
+  "function called by `rebox-kill-line' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-kill-ring-save-function 'kill-ring-save
+  "function called by `rebox-kill-ring-save' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+
+(defcustom rebox-yank-function 'yank
+  "function called by `rebox-yank' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
+(defcustom rebox-yank-pop-function 'yank-pop
+  "function called by `rebox-yank-pop' when no box is found."
+  :type 'symbol
+  :group 'rebox)
+
 (defcustom rebox-newline-indent-function-alist
   '((c-mode   . c-indent-new-comment-line)
     (c++-mode . c-indent-new-comment-line)
@@ -1203,8 +1242,7 @@ If style isn't found return first style."
 ;;;###autoload
 (defun rebox-beginning-of-line (arg)
   (interactive "^P")
-  (let ((rebox-mode nil)
-        (orig-m (point-marker))
+  (let ((orig-m (point-marker))
         previous-style
         boxed-line-start-col)
     (save-restriction
@@ -1249,20 +1287,19 @@ If style isn't found return first style."
                 (move-beginning-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (call-interactively (rebox-get-fallback)))
+         (call-interactively (rebox-get-fallback 'rebox-beginning-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
 (put 'rebox-beginning-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to beginning of actual text.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-beginning-of-line-function)))
 
 
 ;;;###autoload
 (defun rebox-end-of-line (arg)
   (interactive "^P")
-  (let ((rebox-mode nil)
-        (orig-m (point-marker))
+  (let ((orig-m (point-marker))
         previous-style
         boxed-line-end-col)
     (save-restriction
@@ -1312,7 +1349,7 @@ If style isn't found return first style."
                 (move-end-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (call-interactively (rebox-get-fallback)))
+         (call-interactively (rebox-get-fallback 'rebox-end-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
 (put 'rebox-end-of-line 'function-documentation
@@ -1323,102 +1360,98 @@ If style isn't found return first style."
 ;;;###autoload
 (defun rebox-kill-line (arg)
   (interactive "P*")
-  (let ((rebox-mode nil))
-    (if (consp arg)
-        (if (equal arg '(4))
-            (funcall (rebox-get-fallback) 1)
-          (funcall (rebox-get-fallback) (list (/ (car arg) 4))))
-      (let (orig-col orig-line)
-        (rebox-kill-yank-wrapper :before-insp-func
-                                 (lambda ()
-                                   (goto-char marked-point)
-                                   (setq orig-line (if previous-regexp1
-                                                       (1- (line-number-at-pos))
-                                                     (line-number-at-pos)))
-                                   (setq orig-col (- (current-column) unindent-count)))
-                                 :mod-func
-                                 (lambda ()
-                                   (goto-char marked-point)
-                                   (condition-case err
-                                       (progn
-                                         (if (and (use-region-p)
-                                                  delete-selection-mode)
-                                             (progn
-                                               (kill-region (region-beginning) (region-end))
-                                               (goto-char (point-max))
-                                               ;; ensure narrowed region is still valid
-                                               (unless (bolp)
-                                                 (insert "\n")))
-                                           (call-interactively (rebox-get-fallback))))
-                                     ('end-of-buffer
-                                      (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
-                                                               ,@(cdr err))))))
-                                 :after-insp-func
-                                 (lambda ()
-                                   ;; try to fix the point
-                                   (goto-char marked-point)
-                                   (let ((new-line-num (if curr-regexp1
-                                                           (1- (line-number-at-pos))
-                                                         (line-number-at-pos)))
-                                         (new-col (- (current-column) previous-margin (length curr-ww))))
-                                     (when (and (< new-line-num 1)
-                                                (>= orig-line 1))
-                                       ;; goto-line
-                                       (goto-char (point-min))
-                                       (forward-line (1- (+ orig-line (if curr-regexp1 1 0)))))
-                                     (when (and (< new-col 0)
-                                                (>= orig-col 0))
-                                       (move-beginning-of-line 1)
-                                       (rebox-beginning-of-line 1))
-                                     (set-marker marked-point (point))))
-                                 :orig-func
-                                 (rebox-get-fallback))))))
+  (if (consp arg)
+      (if (equal arg '(4))
+          (funcall (rebox-get-fallback 'rebox-kill-line-function) 1)
+        (funcall (rebox-get-fallback 'rebox-kill-line-function) (list (/ (car arg) 4))))
+    (let (orig-col orig-line)
+      (rebox-kill-yank-wrapper :before-insp-func
+                               (lambda ()
+                                 (goto-char marked-point)
+                                 (setq orig-line (if previous-regexp1
+                                                     (1- (line-number-at-pos))
+                                                   (line-number-at-pos)))
+                                 (setq orig-col (- (current-column) unindent-count)))
+                               :mod-func
+                               (lambda ()
+                                 (goto-char marked-point)
+                                 (condition-case err
+                                     (progn
+                                       (if (and (use-region-p)
+                                                delete-selection-mode)
+                                           (progn
+                                             (kill-region (region-beginning) (region-end))
+                                             (goto-char (point-max))
+                                             ;; ensure narrowed region is still valid
+                                             (unless (bolp)
+                                               (insert "\n")))
+                                         (call-interactively (rebox-get-fallback 'rebox-kill-line-function))))
+                                   ('end-of-buffer
+                                    (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
+                                                             ,@(cdr err))))))
+                               :after-insp-func
+                               (lambda ()
+                                 ;; try to fix the point
+                                 (goto-char marked-point)
+                                 (let ((new-line-num (if curr-regexp1
+                                                         (1- (line-number-at-pos))
+                                                       (line-number-at-pos)))
+                                       (new-col (- (current-column) previous-margin (length curr-ww))))
+                                   (when (and (< new-line-num 1)
+                                              (>= orig-line 1))
+                                     ;; goto-line
+                                     (goto-char (point-min))
+                                     (forward-line (1- (+ orig-line (if curr-regexp1 1 0)))))
+                                   (when (and (< new-col 0)
+                                              (>= orig-col 0))
+                                     (move-beginning-of-line 1)
+                                     (rebox-beginning-of-line 1))
+                                   (set-marker marked-point (point))))
+                               :orig-func
+                               (rebox-get-fallback 'rebox-kill-line-function)))))
 (put 'rebox-kill-line 'function-documentation
      '(concat
        "Rebox behaviour: kill content without box.  With universal arg, always
 call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-kill-line-function)))
 
 (defun rebox-yank (arg)
   (interactive "P*")
-  (let ((rebox-mode nil))
-    (rebox-kill-yank-wrapper :not-at-nw t
-                             :mod-func
-                             (lambda ()
-                               (goto-char orig-m)
-                               (call-interactively (rebox-get-fallback))
-                               (set-marker orig-m (point)))
-                             :orig-func
-                             (rebox-get-fallback))))
+  (rebox-kill-yank-wrapper :not-at-nw t
+                           :mod-func
+                           (lambda ()
+                             (goto-char orig-m)
+                             (call-interactively (rebox-get-fallback 'rebox-yank-function))
+                             (set-marker orig-m (point)))
+                           :orig-func
+                           (rebox-get-fallback 'rebox-yank-function)))
 (put 'rebox-yank 'function-documentation
      '(concat
        "Rebox behaviour: yank content into box.  With universal ARG, always
 call fallback.
 
 To pass universal ARG to fall-back function, use C-u C-u."
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-yank-function)))
 
 (defun rebox-yank-pop (arg)
   (interactive "P*")
-  (let ((rebox-mode nil))
-    (rebox-kill-yank-wrapper :not-at-nw t
-                             :mod-func
-                             (lambda ()
-                               (goto-char orig-m)
-                               (call-interactively (rebox-get-fallback))
-                               (set-marker orig-m (point)))
-                             :orig-func
-                             (rebox-get-fallback))))
+  (rebox-kill-yank-wrapper :not-at-nw t
+                           :mod-func
+                           (lambda ()
+                             (goto-char orig-m)
+                             (call-interactively (rebox-get-fallback 'rebox-yank-pop-function))
+                             (set-marker orig-m (point)))
+                           :orig-func
+                           (rebox-get-fallback 'rebox-yank-pop-function)))
 (put 'rebox-yank-pop 'function-documentation
      '(concat
        "Rebox behaviour: yank-pop without box.  With universal arg,
 always call fallback.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-yank-pop-function)))
 
 (defun rebox-kill-ring-save (arg)
   (interactive "P")
-  (let ((rebox-mode nil)
-        (mod-p (buffer-modified-p)))
+  (let ((mod-p (buffer-modified-p)))
     (rebox-kill-yank-wrapper :try-whole-box t
                              ;; `not-past-se' refers to bol just after box
                              :not-past-se (if (use-region-p)
@@ -1430,25 +1463,24 @@ always call fallback.\n\n"
                                (call-interactively rebox-kill-ring-save-function)
                                (set-marker orig-m (point-marker)))
                              :orig-func
-                             (rebox-get-fallback))
+                             (rebox-get-fallback 'rebox-kill-ring-save-function))
     ;; kill-ring-save shouldn't change buffer-modified status
     (set-buffer-modified-p mod-p)))
 (put 'rebox-kill-ring-save 'function-documentation
      '(concat
        "Rebox behaviour: save content without box.  With universal arg, always call fallback.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-kill-ring-save-function)))
 
 (defun rebox-center ()
   (interactive "*")
-  (let ((rebox-mode nil))
-    (rebox-left-border-wrapper (lambda ()
-                                 (if (< (current-column) unindent-count)
-                                     (center-region (point-min) (point-max))
-                                   (when orig-func
-                                     (call-interactively orig-func)
-                                     (set-marker orig-m (point))))
-                                 (throw 'rebox-engine-done t))
-                               (rebox-get-fallback))))
+  (rebox-left-border-wrapper (lambda ()
+                               (if (< (current-column) unindent-count)
+                                   (center-region (point-min) (point-max))
+                                 (when orig-func
+                                   (call-interactively orig-func)
+                                   (set-marker orig-m (point))))
+                               (throw 'rebox-engine-done t))
+                             (rebox-get-fallback)))
 (put 'rebox-center 'function-documentation
      '(concat
        "Rebox behaviour: center box.\n\n"
@@ -1456,32 +1488,30 @@ always call fallback.\n\n"
 
 (defun rebox-space (n)
   (interactive "p*")
-  (let ((rebox-mode nil))
-    (rebox-left-border-wrapper (lambda ()
-                                 (goto-char orig-m)
-                                 (if (< (current-column) unindent-count)
-                                     (progn
-                                       (set-marker-insertion-type orig-m t)
-                                       (string-rectangle (point-min)
-                                                         (progn (goto-char (point-max))
-                                                                (point-at-bol 0))
-                                                         (make-string n ? )))
-                                   (call-interactively rebox-space-function)
-                                   ;; we can't change insertion-type in case
-                                   ;; this is the last column of the box
-                                   (set-marker orig-m (point)))
-                                 (throw 'rebox-engine-done t))
-                               (rebox-get-fallback))))
+  (rebox-left-border-wrapper (lambda ()
+                               (goto-char orig-m)
+                               (if (< (current-column) unindent-count)
+                                   (progn
+                                     (set-marker-insertion-type orig-m t)
+                                     (string-rectangle (point-min)
+                                                       (progn (goto-char (point-max))
+                                                              (point-at-bol 0))
+                                                       (make-string n ? )))
+                                 (call-interactively rebox-space-function)
+                                 ;; we can't change insertion-type in case
+                                 ;; this is the last column of the box
+                                 (set-marker orig-m (point)))
+                               (throw 'rebox-engine-done t))
+                             (rebox-get-fallback 'rebox-space-function)))
 (put 'rebox-space 'function-documentation
      '(concat
        "Rebox behaviour: if point is in the left border of a box, move box to the
  right.  With argument N, move n columns.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-space-function)))
 
 (defun rebox-backspace (n)
   (interactive "*p")
-  (let ((rebox-mode nil))
-    (rebox-left-border-wrapper (lambda ()
+  (rebox-left-border-wrapper (lambda ()
                                  (if (< orig-col unindent-count)
                                      (delete-rectangle (point-min)
                                                        (progn (goto-char (point-max))
@@ -1494,12 +1524,12 @@ always call fallback.\n\n"
                                    (goto-char orig-m)
                                    (call-interactively rebox-backspace-function))
                                  (throw 'rebox-engine-done t))
-                               (rebox-get-fallback))))
+                               (rebox-get-fallback 'rebox-backspace-function)))
  (put 'rebox-backspace 'function-documentation
      '(concat
        "Rebox behaviour: in the left border of a box, move box to the left.
 With argument N, move n columns.\n\n"
-       (rebox-document-binding)))
+       (rebox-document-binding 'rebox-backspace-function)))
 
 ;;;###autoload
 (defun rebox-indent-new-line (arg)
@@ -1516,80 +1546,79 @@ If point is outside a box call function from
 `rebox-newline-indent-function-alist'.
 "
   (interactive "*P")
-  (let ((rebox-mode nil))
-    (save-restriction
-      (let (orig-m
-            style
-            text-beg-col)
-        (condition-case err
-            (progn
-              (setq orig-m (point-marker))
-              (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
-              (set-marker-insertion-type orig-m t)
-              (setq style (rebox-guess-style))
-              (if (not (or (= style 111)
-                           (rebox-is-regular-comment style)))
-                  (progn
-                    (setq arg (cond ((not arg)
-                                     1)
-                                    ((and arg
-                                          (numberp arg)
-                                          (> arg 0))
-                                     arg)
-                                    (t
-                                     (signal 'error (format "arg %s not supported by `rebox-indent-new-line'"
-                                                            arg)))))
-                    (rebox-engine :previous-style style
-                                  :refill nil
-                                  :mod-func
-                                  (lambda ()
-                                    ;;-lw- just always goto beginning of line?
-                                    (when arg
-                                      (goto-char orig-m)
-                                      (if (looking-at-p "[ \t]*$")
-                                          ;; creating blank line
-                                          (progn
-                                            (beginning-of-line)
-                                            (setq text-beg-col
-                                                  (if (looking-at-p "[ \t]*$")
-                                                      (progn
-                                                        (goto-char orig-m)
-                                                        (+ previous-margin
-                                                           (length curr-ww)
-                                                           (current-column)))
-                                                    (skip-chars-forward " \t")
-                                                    (+ previous-margin
-                                                       (length curr-ww)
-                                                       (current-column)))))
-                                        (setq text-beg-col (+ previous-margin (length curr-ww))))
-                                      (goto-char orig-m)
-                                      (newline arg))))
-                    (goto-char orig-m)
-                    (move-to-column text-beg-col t))
-                (let ((comment-style 'indent)
-                      column-start)
-                  (widen)
+  (save-restriction
+    (let (orig-m
+          style
+          text-beg-col)
+      (condition-case err
+          (progn
+            (setq orig-m (point-marker))
+            (rebox-find-and-narrow :comment-only comment-auto-fill-only-comments)
+            (set-marker-insertion-type orig-m t)
+            (setq style (rebox-guess-style))
+            (if (not (or (= style 111)
+                         (rebox-is-regular-comment style)))
+                (progn
+                  (setq arg (cond ((not arg)
+                                   1)
+                                  ((and arg
+                                        (numberp arg)
+                                        (> arg 0))
+                                   arg)
+                                  (t
+                                   (signal 'error (format "arg %s not supported by `rebox-indent-new-line'"
+                                                          arg)))))
+                  (rebox-engine :previous-style style
+                                :refill nil
+                                :mod-func
+                                (lambda ()
+                                  ;;-lw- just always goto beginning of line?
+                                  (when arg
+                                    (goto-char orig-m)
+                                    (if (looking-at-p "[ \t]*$")
+                                        ;; creating blank line
+                                        (progn
+                                          (beginning-of-line)
+                                          (setq text-beg-col
+                                                (if (looking-at-p "[ \t]*$")
+                                                    (progn
+                                                      (goto-char orig-m)
+                                                      (+ previous-margin
+                                                         (length curr-ww)
+                                                         (current-column)))
+                                                  (skip-chars-forward " \t")
+                                                  (+ previous-margin
+                                                     (length curr-ww)
+                                                     (current-column)))))
+                                      (setq text-beg-col (+ previous-margin (length curr-ww))))
+                                    (goto-char orig-m)
+                                    (newline arg))))
                   (goto-char orig-m)
-                  (comment-beginning)
-                  (setq column-start (current-column))
-                  (goto-char orig-m)
-                  (call-interactively (rebox-get-newline-indent-function))
-                  (indent-to-column column-start))))
-          ('rebox-error
-           (let ((err-marker (point-marker))
-                 (saved-func (rebox-get-newline-indent-function)))
-             (goto-char orig-m)
-             (cond ((eq (car err) 'rebox-comment-not-found-error)
-                    (message "rebox-indent-new-line: unable to find comment, calling %s."
-                             saved-func))
-                   ((eq (car err) 'rebox-mid-line-comment-found)
-                    (message "midline comment found at (%s), calling %s" err-marker saved-func)))
-             (call-interactively saved-func)))
-          ('rebox-comment-not-found-error
-           (message "rebox-indent-new-line: unable to find comment, calling saved function.")
-           (call-interactively (rebox-get-newline-indent-function)))
-          ('error
-           (error "rebox-indent-new-line wrapper: %s" err)))))))
+                  (move-to-column text-beg-col t))
+              (let ((comment-style 'indent)
+                    column-start)
+                (widen)
+                (goto-char orig-m)
+                (comment-beginning)
+                (setq column-start (current-column))
+                (goto-char orig-m)
+                (call-interactively (rebox-get-newline-indent-function))
+                (indent-to-column column-start))))
+        ('rebox-error
+         (let ((err-marker (point-marker))
+               (saved-func (rebox-get-newline-indent-function)))
+           (goto-char orig-m)
+           (cond ((eq (car err) 'rebox-comment-not-found-error)
+                  (message "rebox-indent-new-line: unable to find comment, calling %s."
+                           saved-func))
+                 ((eq (car err) 'rebox-mid-line-comment-found)
+                  (message "midline comment found at (%s), calling %s" err-marker saved-func)))
+           (call-interactively saved-func)))
+        ('rebox-comment-not-found-error
+         (message "rebox-indent-new-line: unable to find comment, calling saved function.")
+         (call-interactively (rebox-get-newline-indent-function)))
+        ('error
+         (error "rebox-indent-new-line wrapper: %s" err))))))
 
 ;;;###autoload
 (defun rebox-dwim (arg)
@@ -2273,24 +2302,29 @@ the empty regexp."
     (setq string (substring string 1)))
   string)
 
-(defun rebox-get-fallback ()
+(defun rebox-get-fallback (&optional saved-function)
   "return fallback function found"
-  (let* ((rebox-mode nil)
-         (key (this-single-command-keys))
-         (command (key-binding key)))
-    (when (and (equal key [backspace])
-               (null command))
-      (setq command (key-binding (kbd "DEL"))))
-    command))
+  (if rebox-mode
+      (let* ((rebox-mode nil)
+             (command (key-binding (this-single-command-keys))))
+        (when (and (equal (this-single-command-keys) [backspace])
+                   (null command))
+          (setq command (key-binding "\d")))
+        command)
+    (eval saved-function)))
 
-(defun rebox-document-binding ()
+(defun rebox-document-binding (&optional saved-function)
   (concat
    "Works by performing reboxed behaviour when invoked in
 a box context.  Call the fallback command"
    (when (eq this-command 'describe-key)
      (let ((fallback (rebox-get-fallback)))
        (when fallback
-         (format ", which in this case is `%s'" fallback))))
+         (if (eq fallback (eval saved-function))
+          (format ", which in this case is \"%s\" defined by `%s'"
+             (eval saved-function)
+             saved-function)
+         (format ", which in this case is `%s'" (rebox-get-fallback))))))
    "."))
 
 
