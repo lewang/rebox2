@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Oct 28 15:13:39 2012 (+0800)
+;; Last-Updated: Sun Oct 28 15:26:50 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 462
+;;     Update #: 464
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -710,55 +710,56 @@ lines in the body of box."
   :type 'string
   :group 'rebox)
 
-(defcustom rebox-newline-indent-function-default 'comment-indent-new-line
+(defcustom rebox-newline-indent-command 'comment-indent-new-line
   "function called by `rebox-indent-new-line' no box is found."
+  :type 'command
   :group 'rebox)
 
-(defvar rebox-newline-indent-function nil
-  "cached function for this buffer.")
-(make-variable-buffer-local 'rebox-newline-indent-function)
+(make-variable-buffer-local 'rebox-newline-indent-command)
 
-(defcustom rebox-backspace-function 'backward-delete-char-untabify
+(defcustom rebox-backspace-command 'backward-delete-char-untabify
   "function called by `rebox-backpace' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
-(defcustom rebox-space-function 'self-insert-command
+(defcustom rebox-space-command 'self-insert-command
   "function called by `rebox-space' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
-(defcustom rebox-kill-line-function 'kill-line
+(defcustom rebox-kill-line-command 'kill-line
   "function called by `rebox-kill-line' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
-(defcustom rebox-kill-ring-save-function 'kill-ring-save
+(defcustom rebox-kill-ring-save-command 'kill-ring-save
   "function called by `rebox-kill-ring-save' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
 
-(defcustom rebox-yank-function 'yank
+(defcustom rebox-yank-command 'yank
   "function called by `rebox-yank' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
-(defcustom rebox-end-of-line-function 'move-end-of-line
+(defcustom rebox-end-of-line-command 'move-end-of-line
   "function called by `rebox-end-of-line' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
-(defcustom rebox-beginning-of-line-function 'move-beginning-of-line
+(defcustom rebox-beginning-of-line-command 'move-beginning-of-line
   "function called by `rebox-beginning-of-line' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
-(defcustom rebox-yank-pop-function 'yank-pop
+(defcustom rebox-yank-pop-command 'yank-pop
   "function called by `rebox-yank-pop' when no box is found."
-  :type 'symbol
+  :type 'command
   :group 'rebox)
 
+;;; We can potentially just lookup the key-binding for "C-j", but that would
+;;; be wrong for emacs-lisp-mode, so it's not always consistent.
 (defcustom rebox-newline-indent-function-alist
   '((c-mode   . c-indent-new-comment-line)
     (c++-mode . c-indent-new-comment-line)
@@ -1297,13 +1298,13 @@ If style isn't found return first style."
                 (move-beginning-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (rebox-call-command (rebox-get-fallback 'rebox-beginning-of-line-function)))
+         (rebox-call-command (rebox-get-fallback 'rebox-beginning-of-line-command)))
         ('error
          (signal (car err) (cdr err)))))))
 (put 'rebox-beginning-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to beginning of actual text.\n\n"
-       (rebox-document-binding 'rebox-beginning-of-line-function)))
+       (rebox-document-binding 'rebox-beginning-of-line-command)))
 
 
 ;;;###autoload
@@ -1359,21 +1360,21 @@ If style isn't found return first style."
                 (move-end-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (rebox-call-command (rebox-get-fallback 'rebox-end-of-line-function)))
+         (rebox-call-command (rebox-get-fallback 'rebox-end-of-line-command)))
         ('error
          (signal (car err) (cdr err)))))))
 (put 'rebox-end-of-line 'function-documentation
      '(concat
        "Rebox behaviour: go to end of actual text.\n\n"
-       (rebox-document-binding 'rebox-end-of-line-function)))
+       (rebox-document-binding 'rebox-end-of-line-command)))
 
 ;;;###autoload
 (defun rebox-kill-line (arg)
   (interactive "P*")
   (if (consp arg)
       (if (equal arg '(4))
-          (funcall (rebox-get-fallback 'rebox-kill-line-function) 1)
-        (funcall (rebox-get-fallback 'rebox-kill-line-function) (list (/ (car arg) 4))))
+          (funcall (rebox-get-fallback 'rebox-kill-line-command) 1)
+        (funcall (rebox-get-fallback 'rebox-kill-line-command) (list (/ (car arg) 4))))
     (let (orig-col orig-line)
       (rebox-kill-yank-wrapper :before-insp-func
                                (lambda ()
@@ -1395,7 +1396,7 @@ If style isn't found return first style."
                                              ;; ensure narrowed region is still valid
                                              (unless (bolp)
                                                (insert "\n")))
-                                         (rebox-call-command (rebox-get-fallback 'rebox-kill-line-function))))
+                                         (rebox-call-command (rebox-get-fallback 'rebox-kill-line-command))))
                                    ('end-of-buffer
                                     (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
                                                              ,@(cdr err))))))
@@ -1418,12 +1419,12 @@ If style isn't found return first style."
                                      (rebox-beginning-of-line 1))
                                    (set-marker marked-point (point))))
                                :orig-func
-                               (rebox-get-fallback 'rebox-kill-line-function)))))
+                               (rebox-get-fallback 'rebox-kill-line-command)))))
 (put 'rebox-kill-line 'function-documentation
      '(concat
        "Rebox behaviour: kill content without box.  With universal arg, always
 call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
-       (rebox-document-binding 'rebox-kill-line-function)))
+       (rebox-document-binding 'rebox-kill-line-command)))
 
 (defun rebox-yank (arg)
   (interactive "P*")
@@ -1431,17 +1432,17 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
                            :mod-func
                            (lambda ()
                              (goto-char orig-m)
-                             (rebox-call-command (rebox-get-fallback 'rebox-yank-function))
+                             (rebox-call-command (rebox-get-fallback 'rebox-yank-command))
                              (set-marker orig-m (point)))
                            :orig-func
-                           (rebox-get-fallback 'rebox-yank-function)))
+                           (rebox-get-fallback 'rebox-yank-command)))
 (put 'rebox-yank 'function-documentation
      '(concat
        "Rebox behaviour: yank content into box.  With universal ARG, always
 call fallback.
 
 To pass universal ARG to fall-back function, use C-u C-u."
-       (rebox-document-binding 'rebox-yank-function)))
+       (rebox-document-binding 'rebox-yank-command)))
 
 (defun rebox-yank-pop (arg)
   (interactive "P*")
@@ -1449,15 +1450,15 @@ To pass universal ARG to fall-back function, use C-u C-u."
                            :mod-func
                            (lambda ()
                              (goto-char orig-m)
-                             (rebox-call-command (rebox-get-fallback 'rebox-yank-pop-function))
+                             (rebox-call-command (rebox-get-fallback 'rebox-yank-pop-command))
                              (set-marker orig-m (point)))
                            :orig-func
-                           (rebox-get-fallback 'rebox-yank-pop-function)))
+                           (rebox-get-fallback 'rebox-yank-pop-command)))
 (put 'rebox-yank-pop 'function-documentation
      '(concat
        "Rebox behaviour: yank-pop without box.  With universal arg,
 always call fallback.\n\n"
-       (rebox-document-binding 'rebox-yank-pop-function)))
+       (rebox-document-binding 'rebox-yank-pop-command)))
 
 (defun rebox-kill-ring-save (arg)
   (interactive "P")
@@ -1470,16 +1471,16 @@ always call fallback.\n\n"
                              :mod-func
                              (lambda ()
                                (goto-char orig-m)
-                               (rebox-call-command rebox-kill-ring-save-function)
+                               (rebox-call-command rebox-kill-ring-save-command)
                                (set-marker orig-m (point-marker)))
                              :orig-func
-                             (rebox-get-fallback 'rebox-kill-ring-save-function))
+                             (rebox-get-fallback 'rebox-kill-ring-save-command))
     ;; kill-ring-save shouldn't change buffer-modified status
     (set-buffer-modified-p mod-p)))
 (put 'rebox-kill-ring-save 'function-documentation
      '(concat
        "Rebox behaviour: save content without box.  With universal arg, always call fallback.\n\n"
-       (rebox-document-binding 'rebox-kill-ring-save-function)))
+       (rebox-document-binding 'rebox-kill-ring-save-command)))
 
 (defun rebox-center ()
   (interactive "*")
@@ -1507,17 +1508,17 @@ always call fallback.\n\n"
                                                        (progn (goto-char (point-max))
                                                               (point-at-bol 0))
                                                        (make-string n ? )))
-                                 (rebox-call-command rebox-space-function)
+                                 (rebox-call-command rebox-space-command)
                                  ;; we can't change insertion-type in case
                                  ;; this is the last column of the box
                                  (set-marker orig-m (point)))
                                (throw 'rebox-engine-done t))
-                             (rebox-get-fallback 'rebox-space-function)))
+                             (rebox-get-fallback 'rebox-space-command)))
 (put 'rebox-space 'function-documentation
      '(concat
        "Rebox behaviour: if point is in the left border of a box, move box to the
  right.  With argument N, move n columns.\n\n"
-       (rebox-document-binding 'rebox-space-function)))
+       (rebox-document-binding 'rebox-space-command)))
 
 (defun rebox-backspace (n)
   (interactive "*p")
@@ -1532,14 +1533,14 @@ always call fallback.\n\n"
                                                                 (move-to-column max-n))
                                                               (point)))
                                    (goto-char orig-m)
-                                   (rebox-call-command rebox-backspace-function))
+                                   (rebox-call-command rebox-backspace-command))
                                  (throw 'rebox-engine-done t))
-                               (rebox-get-fallback 'rebox-backspace-function)))
+                               (rebox-get-fallback 'rebox-backspace-command)))
  (put 'rebox-backspace 'function-documentation
      '(concat
        "Rebox behaviour: in the left border of a box, move box to the left.
 With argument N, move n columns.\n\n"
-       (rebox-document-binding 'rebox-backspace-function)))
+       (rebox-document-binding 'rebox-backspace-command)))
 
 ;;;###autoload
 (defun rebox-indent-new-line (arg)
@@ -2755,10 +2756,10 @@ count trailing spaces or t to always count.
 
 (defun rebox-get-newline-indent-function ()
   "return preferred newline-and-indent function"
-  (setq rebox-newline-indent-function
-        (or rebox-newline-indent-function
+  (setq rebox-newline-indent-command
+        (or rebox-newline-indent-command
             (cdr (assq major-mode rebox-newline-indent-function-alist))
-            rebox-newline-indent-function-default)))
+            rebox-newline-indent-command)))
 
 (defun rebox-get-fill-column (ww ee margin title-plist)
   (max (- (max fill-column
