@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Oct 28 15:06:26 2012 (+0800)
+;; Last-Updated: Sun Oct 28 15:13:39 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 460
+;;     Update #: 462
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1297,7 +1297,7 @@ If style isn't found return first style."
                 (move-beginning-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (call-interactively (rebox-get-fallback 'rebox-beginning-of-line-function)))
+         (rebox-call-command (rebox-get-fallback 'rebox-beginning-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
 (put 'rebox-beginning-of-line 'function-documentation
@@ -1359,7 +1359,7 @@ If style isn't found return first style."
                 (move-end-of-line 1))))
         ('rebox-error
          (goto-char orig-m)
-         (call-interactively (rebox-get-fallback 'rebox-end-of-line-function)))
+         (rebox-call-command (rebox-get-fallback 'rebox-end-of-line-function)))
         ('error
          (signal (car err) (cdr err)))))))
 (put 'rebox-end-of-line 'function-documentation
@@ -1395,7 +1395,7 @@ If style isn't found return first style."
                                              ;; ensure narrowed region is still valid
                                              (unless (bolp)
                                                (insert "\n")))
-                                         (call-interactively (rebox-get-fallback 'rebox-kill-line-function))))
+                                         (rebox-call-command (rebox-get-fallback 'rebox-kill-line-function))))
                                    ('end-of-buffer
                                     (signal 'end-of-buffer `(,(format "end of box reached, aborting %s." this-command)
                                                              ,@(cdr err))))))
@@ -1431,7 +1431,7 @@ call fallback.  With 1+ universal arg, pass (n-1) args to fallback.\n\n"
                            :mod-func
                            (lambda ()
                              (goto-char orig-m)
-                             (call-interactively (rebox-get-fallback 'rebox-yank-function))
+                             (rebox-call-command (rebox-get-fallback 'rebox-yank-function))
                              (set-marker orig-m (point)))
                            :orig-func
                            (rebox-get-fallback 'rebox-yank-function)))
@@ -1449,7 +1449,7 @@ To pass universal ARG to fall-back function, use C-u C-u."
                            :mod-func
                            (lambda ()
                              (goto-char orig-m)
-                             (call-interactively (rebox-get-fallback 'rebox-yank-pop-function))
+                             (rebox-call-command (rebox-get-fallback 'rebox-yank-pop-function))
                              (set-marker orig-m (point)))
                            :orig-func
                            (rebox-get-fallback 'rebox-yank-pop-function)))
@@ -1470,7 +1470,7 @@ always call fallback.\n\n"
                              :mod-func
                              (lambda ()
                                (goto-char orig-m)
-                               (call-interactively rebox-kill-ring-save-function)
+                               (rebox-call-command rebox-kill-ring-save-function)
                                (set-marker orig-m (point-marker)))
                              :orig-func
                              (rebox-get-fallback 'rebox-kill-ring-save-function))
@@ -1487,7 +1487,7 @@ always call fallback.\n\n"
                                (if (< (current-column) unindent-count)
                                    (center-region (point-min) (point-max))
                                  (when orig-func
-                                   (call-interactively orig-func)
+                                   (rebox-call-command orig-func)
                                    (set-marker orig-m (point))))
                                (throw 'rebox-engine-done t))
                              (rebox-get-fallback)))
@@ -1507,7 +1507,7 @@ always call fallback.\n\n"
                                                        (progn (goto-char (point-max))
                                                               (point-at-bol 0))
                                                        (make-string n ? )))
-                                 (call-interactively rebox-space-function)
+                                 (rebox-call-command rebox-space-function)
                                  ;; we can't change insertion-type in case
                                  ;; this is the last column of the box
                                  (set-marker orig-m (point)))
@@ -1532,7 +1532,7 @@ always call fallback.\n\n"
                                                                 (move-to-column max-n))
                                                               (point)))
                                    (goto-char orig-m)
-                                   (call-interactively rebox-backspace-function))
+                                   (rebox-call-command rebox-backspace-function))
                                  (throw 'rebox-engine-done t))
                                (rebox-get-fallback 'rebox-backspace-function)))
  (put 'rebox-backspace 'function-documentation
@@ -1612,7 +1612,7 @@ If point is outside a box call function from
                 (comment-beginning)
                 (setq column-start (current-column))
                 (goto-char orig-m)
-                (call-interactively (rebox-get-newline-indent-function))
+                (rebox-call-command (rebox-get-newline-indent-function))
                 (indent-to-column column-start))))
         ('rebox-error
          (let ((err-marker (point-marker))
@@ -1623,10 +1623,10 @@ If point is outside a box call function from
                            saved-func))
                  ((eq (car err) 'rebox-mid-line-comment-found)
                   (message "midline comment found at (%s), calling %s" err-marker saved-func)))
-           (call-interactively saved-func)))
+           (rebox-call-command saved-func)))
         ('rebox-comment-not-found-error
          (message "rebox-indent-new-line: unable to find comment, calling saved function.")
-         (call-interactively (rebox-get-newline-indent-function)))
+         (rebox-call-command (rebox-get-newline-indent-function)))
         ('error
          (error "rebox-indent-new-line wrapper: %s" err))))))
 
@@ -1746,7 +1746,7 @@ With numeric arg, use explicit style.
          (goto-char orig-m)
          (when (and refill
                     (not (use-region-p)))
-           (call-interactively 'fill-paragraph)))
+           (rebox-call-command 'fill-paragraph)))
         ('error
          (error "rebox-cycle caught error: %s" err))))
     (goto-char orig-m)))
@@ -1810,7 +1810,7 @@ With numeric arg, use explicit style.
        (and orig-func
             (let ((current-prefix-arg (when (consp current-prefix-arg)
                                         (list (/ (car current-prefix-arg) 4)))))
-              (call-interactively orig-func))))
+              (rebox-call-command orig-func))))
       ('error
        (signal (car err) (cdr err))))))
 
@@ -1839,7 +1839,7 @@ With numeric arg, use explicit style.
       ('rebox-error
        (goto-char orig-m)
        (and orig-func
-            (call-interactively orig-func)))
+            (rebox-call-command orig-func)))
       ('error
        (signal (car err) (cdr err))))))
 
@@ -2323,6 +2323,14 @@ the empty regexp."
           (setq command (key-binding (kbd "DEL"))))
         command)
     (eval saved-function)))
+
+
+(defun rebox-call-command (command)
+  "call command without `rebox-mode-map'.
+
+This allows rebox to play nicely with other commands who want to introspect key-binding."
+  (let ((rebox-mode nil))
+    (call-interactively command)))
 
 (defun rebox-document-binding (&optional saved-function)
   (concat
