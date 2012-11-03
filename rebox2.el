@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Oct 28 15:26:50 2012 (+0800)
+;; Last-Updated: Sat Nov  3 21:10:26 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 464
+;;     Update #: 467
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1927,7 +1927,14 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (curr-sw (gethash :sw curr-h))
          (curr-ss (gethash :ss curr-h))
          (curr-se (gethash :se curr-h))
-         (unindent-count (+ previous-margin (length previous-ww)))
+         (unindent-count (+ previous-margin (if
+                                                ;; if there is only a left
+                                                ;; border, take spaces at EOL
+                                                ;; trimming into account
+                                                (and previous-ee
+                                                     previous-nn)
+                                                (length previous-ww)
+                                              (length (rebox-rstrip previous-ww)))))
          title-plist)
 
 
