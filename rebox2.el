@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sat Nov  3 21:10:26 2012 (+0800)
+;; Last-Updated: Sat Nov  3 21:42:06 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 467
+;;     Update #: 469
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -265,7 +265,7 @@
   (defvar previous-margin)
   (defvar previous-ee)
   (defvar previous-nw)
-  (defvar unindent-count)
+  (defvar border-margin)
   (defvar orig-m)
   (defvar orig-col)
   (defvar max-n)
@@ -1213,7 +1213,7 @@ If style isn't found return first style."
                                                 (eq (line-number-at-pos) 1))
                                            (and previous-regexp3
                                                 (eq (line-number-at-pos) (1- (line-number-at-pos (point-max)))))
-                                           (< (current-column) unindent-count)
+                                           (< (current-column) border-margin)
                                            (and previous-ee
                                                 (looking-back (rebox-regexp-quote previous-ee :lstrip nil))
                                                 (looking-at-p "[ \t]*$")))
@@ -1279,7 +1279,7 @@ If style isn't found return first style."
                                            (eq (line-number-at-pos) (1- (line-number-at-pos (point-max))))))
                                   (setq boxed-line-start-col previous-margin)
                                 (save-restriction
-                                  (narrow-to-region (+ (point-at-bol) unindent-count)
+                                  (narrow-to-region (+ (point-at-bol) border-margin)
                                                     (point-at-eol))
                                   (beginning-of-line 1)
                                   (setq boxed-line-start-col
@@ -1287,9 +1287,9 @@ If style isn't found return first style."
                                                                   (and previous-ee
                                                                        (regexp-quote previous-ee))
                                                                   "$"))
-                                            unindent-count
+                                            border-margin
                                           (+ (length (rebox-make-fill-prefix))
-                                             unindent-count)))))
+                                             border-margin)))))
                               (throw 'rebox-engine-done t)))
               (goto-char orig-m)
               (if (or (bolp)
@@ -1349,7 +1349,7 @@ If style isn't found return first style."
                                         (goto-char (match-beginning 0))
                                         (current-column)))
                                 ;; blank line
-                                (when (<= boxed-line-end-col unindent-count)
+                                (when (<= boxed-line-end-col border-margin)
                                   (setq boxed-line-end-col (progn (goto-char (point-at-eol))
                                                                   (current-column)))))
                               (throw 'rebox-engine-done t)))
@@ -1382,7 +1382,7 @@ If style isn't found return first style."
                                  (setq orig-line (if previous-regexp1
                                                      (1- (line-number-at-pos))
                                                    (line-number-at-pos)))
-                                 (setq orig-col (- (current-column) unindent-count)))
+                                 (setq orig-col (- (current-column) border-margin)))
                                :mod-func
                                (lambda ()
                                  (goto-char marked-point)
@@ -1485,7 +1485,7 @@ always call fallback.\n\n"
 (defun rebox-center ()
   (interactive "*")
   (rebox-left-border-wrapper (lambda ()
-                               (if (< (current-column) unindent-count)
+                               (if (< (current-column) border-margin)
                                    (center-region (point-min) (point-max))
                                  (when orig-func
                                    (rebox-call-command orig-func)
@@ -1501,7 +1501,7 @@ always call fallback.\n\n"
   (interactive "p*")
   (rebox-left-border-wrapper (lambda ()
                                (goto-char orig-m)
-                               (if (< (current-column) unindent-count)
+                               (if (< (current-column) border-margin)
                                    (progn
                                      (set-marker-insertion-type orig-m t)
                                      (string-rectangle (point-min)
@@ -1523,7 +1523,7 @@ always call fallback.\n\n"
 (defun rebox-backspace (n)
   (interactive "*p")
   (rebox-left-border-wrapper (lambda ()
-                                 (if (< orig-col unindent-count)
+                                 (if (< orig-col border-margin)
                                      (delete-rectangle (point-min)
                                                        (progn (goto-char (point-max))
                                                               (beginning-of-line 0)
@@ -1927,14 +1927,15 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
          (curr-sw (gethash :sw curr-h))
          (curr-ss (gethash :ss curr-h))
          (curr-se (gethash :se curr-h))
-         (unindent-count (+ previous-margin (if
-                                                ;; if there is only a left
-                                                ;; border, take spaces at EOL
-                                                ;; trimming into account
-                                                (and previous-ee
-                                                     previous-nn)
-                                                (length previous-ww)
-                                              (length (rebox-rstrip previous-ww)))))
+         (unindent-count (+ previous-margin (length previous-ww)))
+         (border-margin (+ previous-margin (if
+                                               ;; if there is only a left
+                                               ;; border, take spaces at EOL
+                                               ;; trimming into account
+                                               (and previous-ee
+                                                    previous-nn)
+                                               (length previous-ww)
+                                             (length (rebox-rstrip previous-ww)))))
          title-plist)
 
 
