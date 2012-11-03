@@ -2816,6 +2816,17 @@ count trailing spaces or t to always count.
 
 (rebox-register-all-templates)
 
+(defun rebox-promote-map ()
+  (let ((rebox-mode-binding (assq 'rebox-mode minor-mode-map-alist)))
+    (setq minor-mode-map-alist (delete rebox-mode-binding minor-mode-map-alist))
+    (push rebox-mode-binding minor-mode-map-alist)))
+
+;;; we need priority over paredit, which dumbly maps "DEL"
+(eval-after-load "paredit"
+  '(rebox-promote-map))
+
+
+
 (provide 'rebox2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
