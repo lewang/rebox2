@@ -27,29 +27,27 @@ BATCH=$(EMACS) -batch -q -no-site-file -eval                             			\
 ELC= $(BATCH) -f batch-byte-compile
 
 # How to copy the lisp files and elc files to their distination.
-CP = cp -p
+CP = install -m 644
 
 ##----------------------------------------------------------------------
 ##  BELOW THIS LINE ON YOUR OWN RISK!
 ##----------------------------------------------------------------------
 
 # The following variables need to be defined by the maintainer
-LISPF      = 	rebox2.el	 	\
+LISPFILES   = 	rebox2.el	 	\
 
-ELCFILES    = $(LISPF:.el=.elc)
+ELCFILES    = $(LISPFILES:.el=.elc)
 
 default: $(ELCFILES)
 
 install: install-lisp
 
 install-lisp: $(LISPFILES) $(ELCFILES)
-	if [ ! -d $(lispdir) ]; then $(MKDIR) $(lispdir); else true; fi ;
-	$(CP) $(LISPFILES)  $(lispdir)
-	$(CP) $(ELCFILES)   $(lispdir)
+	install -d -m 755 $(DESTDIR)$(lispdir)
+	$(CP) $(LISPFILES) $(DESTDIR)$(lispdir)
+	$(CP) $(ELCFILES) $(DESTDIR)$(lispdir)
 
-clean:
-	${MAKE} cleanelc
-
+clean: cleanelc
 cleanelc:
 	rm -f $(ELCFILES)
 
