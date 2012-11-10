@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sat Nov  3 21:42:06 2012 (+0800)
+;; Last-Updated: Sat Nov 10 23:23:38 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 469
+;;     Update #: 474
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1014,7 +1014,10 @@ refilled with it."
                  ww       (cond ((zerop (match-beginning 0)) nil)
                                 (t (substring line2 0 (match-beginning 0))))
                  ee       (cond ((= (match-end 0) (length line2)) nil)
-                                (t (rebox-rstrip (substring line2 (match-end 0)))))
+                                (t (let ((str (rebox-rstrip (substring line2 (match-end 0)))))
+                                     (if (zerop (length str))
+                                         nil
+                                       str))))
                  sw       (cond ((not line3) nil)
                                 (merge-sw (rebox-rstrip line3))
                                 ((zerop (match-beginning 0)) nil)
