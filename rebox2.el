@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sat Nov 10 23:23:38 2012 (+0800)
+;; Last-Updated: Sat Nov 10 23:24:32 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 474
+;;     Update #: 475
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -593,7 +593,6 @@
          "/*           * "
          " * box123456 * "
          " *************/")
-
     (243 348
          "/************* "
          " * box123456 * "
@@ -607,6 +606,12 @@
          "/*************/"
          "/* box123456 */"
          "/*************/")
+
+    ;; doxygen style
+    (246 248
+      "/************//**"
+      " * box123456 "
+      " ****************/")
 
     ))
 
@@ -2093,11 +2098,11 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
         ;; are we inside a comment?
         (when (progn
                 (goto-char (point-at-eol))
-                (rebox-line-has-comment :move-multiline nil))
+                (rebox-line-is-comment :move-multiline nil))
           (setq comment-b (point-at-bol))
           (goto-char (point-at-eol 0))  ; previous line's eol
           (catch 'roo
-            (while (rebox-line-has-comment :throw-label 'roo)
+            (while (rebox-line-is-comment :throw-label 'roo)
               (setq comment-b (point-at-bol))
               (if (eq (point-at-bol) (point-min))
                   (throw 'roo nil)
@@ -2106,7 +2111,7 @@ The narrowed buffer should contain only whole lines, otherwise it will look stra
           (end-of-line 2)
           (setq comment-e (point-at-bol))
           (catch 'roo
-            (while (rebox-line-has-comment :throw-label 'roo
+            (while (rebox-line-is-comment :throw-label 'roo
                                            :move-multiline nil)
               (goto-char (point-at-eol 2))
               (setq comment-e (point-at-bol))
@@ -2242,12 +2247,13 @@ returns guess as single digit."
      rebox-style-hash)
     best-style))
 
-(defun* rebox-line-has-comment (&key (move-multiline t)
+(defun* rebox-line-is-comment (&key (move-multiline t)
                                      (throw-label nil))
   (let ((bare-comment-end (and comment-end (rebox-rstrip (rebox-lstrip comment-end))))
         (bare-comment-start (and comment-start (rebox-rstrip (rebox-lstrip comment-start))))
         (starting-bol (point-at-bol))
-        comment-start-pos)
+        comment-start-pos
+        temp)
     (end-of-line 1)
     (setq comment-start-pos (comment-beginning))
     (unless comment-start-pos
@@ -2260,10 +2266,25 @@ returns guess as single digit."
                                 (point-at-bol)
                                 t)
         (setq comment-start-pos (comment-beginning))))
+    ;;
     ;; detect mid-line comments
+    ;;
+    ;; consider doxygen header row which is two consecutive comments:
+    ;;
+    ;;     "/********//**"
+    (loop
+     with temp = comment-start-pos
+     while temp
+     do (progn
+          (goto-char temp)
+          (skip-chars-backward " \t")
+          (if (bolp)
+              (return)
+            (backward-char)
+            (when (setq temp (comment-beginning))
+              (setq comment-start-pos temp)))))
+
     (when comment-start-pos
-      (goto-char comment-start-pos)
-      (skip-chars-backward " \t")
       (unless (= (point) (point-at-bol))
         (signal 'rebox-mid-line-comment-found nil)))
     (if (and (< (point) starting-bol)
