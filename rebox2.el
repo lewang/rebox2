@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sat Nov 10 23:24:32 2012 (+0800)
+;; Last-Updated: Sun Nov 11 15:25:21 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 475
+;;     Update #: 476
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -51,23 +51,38 @@
 ;;
 ;; 2. Basic install - add to your ".emacs":
 ;;
-;;     (require 'rebox2)
-;;     (global-set-key [(meta q)] 'rebox-dwim)
-;;     (global-set-key [(shift meta q)] 'rebox-cycle)
+;;        (setq rebox-style-loop '(24 16))
+;;        (require 'rebox2)
+;;        (global-set-key [(meta q)] 'rebox-dwim)
+;;        (global-set-key [(shift meta q)] 'rebox-cycle)
+;;
+;;    Note that if you do not need to specify the HUNDREDS digit of the style,
+;;    rebox will figure it out based on the major-moe.
 ;;
 ;; 3. Full install - use `rebox-mode' in major-mode hooks:
 ;;
-;;     ;; setup rebox for emacs-lisp
-;;     (add-hook 'emacs-lisp-mode-hook (lambda ()
-;;                                       (set (make-local-variable 'rebox-style-loop) '(525 517 521))
-;;                                       (set (make-local-variable 'rebox-min-fill-column) 40)
-;;                                       (rebox-mode 1)))
+;;        ;; setup rebox for emacs-lisp
+;;        (add-hook 'emacs-lisp-mode-hook (lambda ()
+;;                                          (set (make-local-variable 'rebox-style-loop) '(25 17 21))
+;;                                          (set (make-local-variable 'rebox-min-fill-column) 40)
+;;                                          (rebox-mode 1)))
 ;;
 ;;    Default `rebox-style-loop' should work for most programming modes, however,
-;;    you may want to set the style you prefer for each major-mode like above
+;;    you may want to set the style you prefer.
 ;;
+;;    Here is an customization example that
 ;;
+;;      - sets comments to use "/* ... */" style in c++-mode
+;;      - adds Doxygen box style for C++
 
+;;        (defun my-c++-setup ()
+;;          (setq comment-start "/* "
+;;                comment-end " */")
+;;          (unless (memq 46 rebox-style-loop)
+;;            (make-local-variable 'rebox-style-loop)
+;;            (nconc rebox-style-loop '(46))))
+;;        (add-hook 'c++-mode-hook #'my-c++-setup)
+;;
 ;;; Ideas removed from François Pinard's original version
 ;;
 ;; * Building styles on top of each other.
