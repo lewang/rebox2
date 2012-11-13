@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Nov 11 15:25:21 2012 (+0800)
+;; Last-Updated: Tue Nov 13 20:57:37 2012 (+0800)
 ;;           By: Le Wang
-;;     Update #: 476
+;;     Update #: 478
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -632,6 +632,9 @@
 
 (defvar rebox-cache nil)
 (make-variable-buffer-local 'rebox-cache)
+(defvar rebox-comment-vars-normalized nil)
+(make-variable-buffer-local 'rebox-comment-vars-normalized)
+
 (put 'rebox-cache 'permanent-local t)
 
 (defvar rebox-save-env-vars
@@ -858,8 +861,6 @@ header.
         (setq normal-auto-fill-function 'rebox-do-auto-fill)
         (auto-fill-mode 1)
         ;; we call non-autoloaded functions from newcomment, so this is needed
-        (when comment-start
-          (comment-normalize-vars))
         (when (fboundp 'yas/minor-mode)
           (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t)
           (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))
@@ -2264,6 +2265,9 @@ returns guess as single digit."
 
 (defun* rebox-line-is-comment (&key (move-multiline t)
                                      (throw-label nil))
+  (unless rebox-comment-vars-normalized
+    (comment-normalize-vars)
+    (setq rebox-comment-vars-normalized t))
   (let ((bare-comment-end (and comment-end (rebox-rstrip (rebox-lstrip comment-end))))
         (bare-comment-start (and comment-start (rebox-rstrip (rebox-lstrip comment-start))))
         (starting-bol (point-at-bol))
