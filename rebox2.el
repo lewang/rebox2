@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Jul 14 21:45:18 2013 (+0800)
+;; Last-Updated: Sun Jul 14 22:27:30 2013 (+0800)
 ;;           By: Le Wang
-;;     Update #: 481
+;;     Update #: 482
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -1454,10 +1454,10 @@ always call fallback.\n\n"
                              :mod-func
                              (lambda ()
                                (goto-char orig-m)
-                               (rebox-call-command rebox-kill-ring-save-command)
+                               (call-interactively 'kill-ring-save)
                                (set-marker orig-m (point-marker)))
                              :orig-func
-                             (rebox-get-fallback 'rebox-kill-ring-save-command))
+                             'kill-ring-save)
     ;; kill-ring-save shouldn't change buffer-modified status
     (set-buffer-modified-p mod-p)))
 (put 'rebox-kill-ring-save 'function-documentation
