@@ -12,9 +12,9 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Tue Nov 13 20:57:37 2012 (+0800)
+;; Last-Updated: Sun Jul 14 21:45:18 2013 (+0800)
 ;;           By: Le Wang
-;;     Update #: 478
+;;     Update #: 481
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
@@ -637,12 +637,6 @@
 
 (put 'rebox-cache 'permanent-local t)
 
-(defvar rebox-save-env-vars
-  '(comment-auto-fill-only-comments
-    auto-fill-function
-    normal-auto-fill-function)
-  "list of variables overwritten by `rebox-mode' to be saved.")
-
 (defgroup rebox nil
   "rebox."
   :group 'convenience)
@@ -835,44 +829,9 @@ header.
   :init-value nil
   :lighter rebox-mode-line-string
   :version "0.6"
-  :keymap '(([(shift return)] . rebox-indent-new-line)
-            ([(meta q)] . rebox-dwim)
-            ([(meta Q)] . rebox-cycle)
-            ([(control a)] . rebox-beginning-of-line)
-            ([(control e)] . rebox-end-of-line)
-            ([(control k)] . rebox-kill-line)
-            ([(meta w)] . rebox-kill-ring-save)
-            ([(control y)] . rebox-yank)
-            ([(meta y)] . rebox-yank-pop)
-            ([(meta c)] . rebox-center)
-            (" " . rebox-space)
-            ("" . rebox-backspace))
-  :group 'rebox
-  (if rebox-mode
-      (progn
-        (rebox-save-env)
-        (set (make-local-variable 'comment-auto-fill-only-comments)
-             (if (and (stringp comment-start)
-                      (not (zerop (length comment-start)))
-                      (not (memq major-mode rebox-hybrid-major-modes)))
-                 t
-               nil))
-        (make-local-variable 'normal-auto-fill-function)
-        (setq normal-auto-fill-function 'rebox-do-auto-fill)
-        (auto-fill-mode 1)
-        ;; we call non-autoloaded functions from newcomment, so this is needed
-        (when (fboundp 'yas/minor-mode)
-          (add-hook 'yas/before-expand-snippet-hook 'turn-off-rebox nil t)
-          (add-hook 'yas/after-exit-snippet-hook 'turn-on-rebox nil t))
-        (when (fboundp 'iedit-mode)
-          (add-hook 'iedit-mode-hook 'turn-off-rebox nil t)
-          (add-hook 'iedit-mode-end-hook 'turn-on-rebox nil t)))
-    (rebox-restore-env)
-    (when (called-interactively-p 'any)
-      (remove-hook 'yas/before-expand-snippet-hook 'turn-off-rebox t)
-      (remove-hook 'yas/after-exit-snippet-hook 'turn-on-rebox t)
-      (remove-hook 'iedit-mode-hook 'turn-off-rebox t)
-      (remove-hook 'iedit-mode-end-hook 'turn-on-rebox t))))
+  :keymap '(([(meta q)] . rebox-dwim)
+            ([(meta Q)] . rebox-cycle))
+  :group 'rebox)
 
 (defun turn-on-rebox ()
   (rebox-mode 1))
@@ -2845,23 +2804,6 @@ count trailing spaces or t to always count.
            loop
            " ")
           ")"))
-
-(defun rebox-save-env ()
-  "save some settings"
-  (unless (gethash :rebox-save-env-done (rebox-cache))
-    (let (env)
-      (mapc (lambda (var)
-              (push (cons var (symbol-value var)) env))
-            rebox-save-env-vars)
-      (puthash :rebox-save-env-alist env (rebox-cache)))
-    (puthash :rebox-save-env-done t (rebox-cache))))
-
-(defun rebox-restore-env ()
-  "load some settings"
-  (let ((env (gethash :rebox-save-env-alist (rebox-cache))))
-    (mapc (lambda (var)
-            (set var (cdr (assq var env))))
-          rebox-save-env-vars)))
 
 ;;; Initialize the internal structures.
 
