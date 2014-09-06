@@ -12,9 +12,6 @@
 
 ;; Created: Mon Jan 10 22:22:32 2011 (+0800)
 ;; Version: 0.7
-;; Last-Updated: Sun Jul 14 22:27:30 2013 (+0800)
-;;           By: Le Wang
-;;     Update #: 482
 ;; URL: https://github.com/lewang/rebox2
 ;; Keywords:
 ;; Compatibility: GNU Emacs 23.2
