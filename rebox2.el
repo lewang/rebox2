@@ -1646,7 +1646,8 @@ With universal arg (C-u), use previous style in loop.
 With numeric arg, use explicit style.
 "
   (interactive "*P")
-  (let ((orig-m (point-marker))
+  (let ((left-margin 0)
+        (orig-m (point-marker))
         ;;copy of mark, so we can possibly change the insertion type
         style
         movement
